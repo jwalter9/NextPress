@@ -1,0 +1,14 @@
+[nextPub] 
+host     = localhost
+port     = 3306
+user     = nextUser
+password = nxt
+database = nextPublic
+
+[nextAdm] 
+host     = localhost
+port     = 3306
+user     = nextUser 
+password = nxt
+database = nextAdmin
+

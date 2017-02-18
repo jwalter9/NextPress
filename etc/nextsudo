@@ -1,0 +1,4 @@
+# reloading apache when a new page is published (or an old one unpublished)
+
+mysql ALL=(root) NOPASSWD: /etc/init.d/apache2 reload
+
