@@ -1,7 +1,7 @@
 -- 
 --  NextPress Public (non-SSL) Procedures
 --  Copyright (C) 2016 Lowadobe Web Services, LLC 
---  web: http://nextpress.online/
+--  web: http://nextpress.org/
 --  email: lowadobe@gmail.com
 --
 

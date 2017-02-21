@@ -2,7 +2,7 @@
 # 
 #  NextPress Installer
 #  Copyright (C) 2016 Lowadobe Web Services, LLC 
-#  web: http://nextpress.online/
+#  web: http://nextpress.org/
 #  email: lowadobe@gmail.com
 #
 
@@ -21,6 +21,7 @@ fi
 
 echo "Installing the NextPress MySQL UDF library"
 make install
+/etc/init.d/mysql restart
 
 if test $? -ne 0; then
 	echo "ERROR: Could not copy lib_mysqludf_nextpress.so to plugin directory"
@@ -29,7 +30,8 @@ else
 	echo "MySQL UDF installed successfully"
 fi
 
-echo -n "\nPlease provide your MySQL root password: "
+echo
+echo -n "Please provide your MySQL root password: "
 read RPWD
 
 mysql -u root --password="$RPWD" mysql < lib_mysqludf_nextpress.sql
@@ -82,10 +84,12 @@ else
 	echo "NextPress admin procedures successfully installed"
 fi
 
-echo -n "\n Site Admin email: "
+echo
+echo -n " Site Admin email: "
 read EML
 
-echo -n "\n Site Admin password: "
+echo
+echo -n " Site Admin password: "
 read PAS
 
 mysql -u root --password="$RPWD" -e "UPDATE nextData.users SET email='$EML',password=MD5('$PAS');"
@@ -127,11 +131,12 @@ else
 fi
 chmod 0440 /etc/sudoers.d/nextsudo
 
+echo
 cp nextPublic.conf /etc/apache2/sites-available/
 if test $? -ne 0; then
 	echo "ERROR: unable to copy etc/nextPublic.conf to /etc/apache2/sites-available"
 else
-	echo "\nNextPress Public Site Config should be reviewed/edited before activation:"
+	echo "NextPress Public Site Config should be reviewed/edited before activation:"
 	echo "  /etc/apache2/sites-available/nextPublic.conf"
 fi
 
@@ -139,7 +144,7 @@ cp nextAdmin.conf /etc/apache2/sites-available/
 if test $? -ne 0; then
 	echo "ERROR: unable to copy etc/nextAdmin.conf to /etc/apache2/sites-available"
 else
-	echo "\nNextPress Admin Site Config should be reviewed/edited before activation:"
+	echo "NextPress Admin Site Config should be reviewed/edited before activation:"
 	echo "  /etc/apache2/sites-available/nextAdmin.conf"
 fi
 

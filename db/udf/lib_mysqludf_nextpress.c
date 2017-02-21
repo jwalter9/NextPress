@@ -1,7 +1,7 @@
 /* 
     lib_mysqludf_nextpress - the UDF library for NextPress
     Copyright (C) 2015 Lowadobe Web Services, LLC 
-    web: http://nextpress.online/
+    web: http://nextpress.org/
     email: lowadobe@gmail.com
 */
 

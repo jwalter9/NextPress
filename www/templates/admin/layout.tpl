@@ -12,8 +12,11 @@
 <body>
 <div id="mainMenu"><ul id="mainHoriz">
 <# IF menu.NUM_ROWS > 0 #>
-    <li><div id="linkDrop"><ul id="linkVert"><# LOOP menu #><li><a href="<# uri #>"><# label #></a></li>
-    <# ENDLOOP #></ul></div></li>
+    <li><div id="linkDrop">
+        <div id="mainMenuList">
+            <# LOOP menu #><a href="<# uri #>"><# label #></a>
+            <# ENDLOOP #></div>
+        </div></li>
 <# ENDIF #>
     <li id="page-name"><# mvp_template #></li>
 <# LOOP notifications #><li><# INCLUDE notification #></li>

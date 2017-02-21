@@ -1,7 +1,7 @@
 -- 
 --  NextPress Core Admin (SSL) Procedures
 --  Copyright (C) 2016 Lowadobe Web Services, LLC 
---  web: http://nextpress.online/
+--  web: http://nextpress.org/
 --  email: lowadobe@gmail.com
 --
 
@@ -28,7 +28,8 @@ CREATE PROCEDURE `Login` (IN eaddr VARCHAR(1024), IN passwd VARCHAR(256),
 BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     SELECT `id` INTO userId FROM `nextData`.`users`
-        WHERE `email` = eaddr AND `password` = MD5(passwd) AND `prohibited` = 0;
+        WHERE `email` = eaddr AND `password` = MD5(passwd) AND `prohibited` = 0
+        LIMIT 1;
     IF userId > 0 THEN
         SELECT `redirect` INTO redir FROM `nextData`.`sessions`
             WHERE `id` = @mvp_session AND `ipAddress` = @mvp_remoteip;
