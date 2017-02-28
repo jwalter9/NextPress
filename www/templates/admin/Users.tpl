@@ -1,6 +1,4 @@
 
-<span class="pagehead">Users</span>
-
 <form action="Users" method="post">
 <ul>
     <li class="horiz"><span class="horiz-head">Filters</span></li>

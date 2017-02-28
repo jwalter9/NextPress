@@ -1,9 +1,16 @@
-li { list-style: none; }
-#mainHoriz li { float: left; padding: 5px 20px 5px 10px; }
-#linkDrop { display: inline-block; background: url('/media/images/NextPress_menuButton.png') no-repeat; border: none; cursor: pointer; height: 32px; width: 148px; }
-#mainMenuList { display: none; position: absolute; min-width: 260px; z-index: 1; }
+body { margin: 0px auto; padding: 0px; }
+li { list-style: none; padding-left: 20px; }
+#mainMenu { width: 100%; position: fixed; top: 0px; background: #EEEEEE; }
+#mainHoriz { margin: 0px; }
+#mainHoriz li { float: left; }
+#linkDrop { display: inline-block; background: url('/media/images/NextPress_menuButton.png') no-repeat; border: none; cursor: pointer; height: 32px; width: 148px; position: relative; }
+#linkDrop:hover #mainMenuList { display: block; }
+#mainMenuList { display: none; position: absolute; min-width: 260px; z-index: 1; top: 32px; }
+#dropList li { float: none; background: #444444; padding: 5px; padding-top: 10px; }
+#dropList li a { text-decoration: none; color: #EEEEEE; }
+#pageDiv { margin: 40px auto; }
+#page-name { font: 24px bold; margin-top: 5px; }
 
-.mainMenu { width: 100%; position: fixed; top: 0px; }
 
 .dd { position: relative; display: block; margin: 0; padding: 0; max-width: 600px; list-style: none; font-size: 13px; line-height: 20px; }
 

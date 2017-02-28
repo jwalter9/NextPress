@@ -1,6 +1,4 @@
 
-<span class="pagehead">Articles</span>
-
 <span class="pagesub"><a href="/ArticleEditor">Write a new Article</a></span>
 
 <table id="artlist">

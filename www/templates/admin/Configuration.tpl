@@ -1,6 +1,4 @@
 
-<span class="pagehead">Configuration</span>
-
 <div class="empty"><ul class="empty">
 <# LOOP config #><# IF section != @.sect #>
     </ul></div><div class="config-section"><span class="config-section"><# section #></span>

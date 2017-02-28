@@ -302,7 +302,9 @@ CREATE PROCEDURE `Users` (INOUT srch VARCHAR(1024), INOUT roleId BIGINT)
 BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     DECLARE srchTerm VARCHAR(1024) DEFAULT '';
-    SET srchTerm = LOWER(srch);
+    IF srch IS NOT NULL THEN
+        SET srchTerm = LOWER(srch);
+    END IF;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
         IF roleId IS NOT NULL AND roleId > 0 THEN
@@ -415,6 +417,7 @@ BEGIN
         END IF;
         SELECT * FROM `nextData`.`users` WHERE `id` = userId;
         SET notAvail = `nextData`.`getConfig`('Site','notifications');
+        CALL `adminMenu`();
     ELSE
         SET @err = 'Please log in.';
     END IF;
@@ -710,6 +713,7 @@ BEGIN
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
         SET htmlCategories = `nextData`.`categoriesHtml`(0);
+        CALL `adminMenu`();
     ELSE
         SET @err = 'Please log in with Admin privileges.';
         SET @mvp_template = 'Login';
@@ -730,6 +734,7 @@ BEGIN
         SET chk = `nextData`.`resetArticleCategories`();
         SET htmlCategories = `nextData`.`categoriesHtml`(0);
         SET @mvp_template = 'Categories';
+        CALL `adminMenu`();
     ELSE
         SET @err = 'Please log in with Admin privileges.';
         SET @mvp_template = 'Login';
@@ -797,6 +802,7 @@ BEGIN
             LEFT JOIN `nextData`.`users` puser ON parent.`idCommenter` = puser.`id`
         WHERE `comments`.`approved` = appr AND `comments`.`spam` = spm
             GROUP BY `comments`.`id` ORDER BY `comments`.`id`;
+        CALL `adminMenu`();
     ELSE
         SET @mvp_template = 'Login';
         SET @err = 'Please log in with Moderator privileges';

@@ -1,6 +1,4 @@
 
-<span class="pagehead">Manage Media</span>
-
 <table>
     <# LOOP media #><tr>
         <td><a href="<# uri #>" target="_blank"><img src="<# thumb #>" /><br /><# uri #></a></td>

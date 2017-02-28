@@ -1,6 +1,4 @@
 
-<span class="pagehead">Pages</span>
-
 <span class="pagesub"><a href="/PageEditor">Create a new Page</a></span>
 
 <table>

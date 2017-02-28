@@ -1,5 +1,5 @@
 
-<span class="pagehead">User Roles for <# users.displayName #></span>
+<span class="pagehead">Roles for <# users.displayName #></span>
 
 <ul>
 <# LOOP roles #><# SET roleid = id #>

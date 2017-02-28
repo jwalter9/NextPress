@@ -13,16 +13,19 @@
 <div id="mainMenu"><ul id="mainHoriz">
 <# IF menu.NUM_ROWS > 0 #>
     <li><div id="linkDrop">
-        <div id="mainMenuList">
-            <# LOOP menu #><a href="<# uri #>"><# label #></a>
-            <# ENDLOOP #></div>
+        <div id="mainMenuList"><ul id="dropList">
+            <# LOOP menu #><li><a href="<# uri #>"><# label #></a></li>
+            <# ENDLOOP #></ul></div>
         </div></li>
 <# ENDIF #>
     <li id="page-name"><# mvp_template #></li>
 <# LOOP notifications #><li><# INCLUDE notification #></li>
 <# ENDLOOP #>
 </ul></div>
+<br />
+<div id="pageDiv">
 	<# TEMPLATE #>
+</div>
 </body>
 </html>
 

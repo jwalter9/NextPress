@@ -1,6 +1,4 @@
 
-<span class="pagehead">My Profile</span>
-
 <form id="profile-form" action="MyProfile" method="post" enctype="multipart/form-data">
     <ul>
         <li><span class="entry-label">Email Address:</span><input type="text" name="eml" value="<# users.email #>" /></li>

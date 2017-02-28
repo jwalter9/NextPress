@@ -1,6 +1,4 @@
 
-<span class="pagehead">Login</span>
-
 <form id="login-form" action="Login" method="post">
     <ul>
         <li><span class="entry-label">Email Address:</span><input type="text" name="eaddr" value="" /></li>
