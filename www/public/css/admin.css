@@ -1,5 +1,9 @@
 body { margin: 0px auto; padding: 0px; }
 li { list-style: none; padding-left: 20px; }
+table { margin: auto; }
+td { padding: 16px; }
+th { font-size: 20px; font-weight: bold; color: #333333; text-align: left; padding: 10px; }
+tr:nth-child(even) { background-color: #EEEEEE; }
 #mainMenu { width: 100%; position: fixed; top: 0px; background: #EEEEEE; }
 #mainHoriz { margin: 0px; }
 #mainHoriz li { float: left; }
@@ -10,7 +14,11 @@ li { list-style: none; padding-left: 20px; }
 #dropList li a { text-decoration: none; color: #EEEEEE; }
 #pageDiv { margin: 40px auto; }
 #page-name { font: 24px bold; margin-top: 5px; }
-
+span.pagesub { float: right; margin-right: 64px; }
+li.editor-entry { float: right; }
+li.tiles { float: left; padding: 25px; font-weight: bold; text-decoration: none; text-align: center; }
+div.spacer { height: 40px; }
+.mce-container,.mce-container *,.mce-widget,.mce-widget *,.mce-reset { z-index: -1; }
 
 .dd { position: relative; display: block; margin: 0; padding: 0; max-width: 600px; list-style: none; font-size: 13px; line-height: 20px; }
 

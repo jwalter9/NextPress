@@ -1,5 +1,5 @@
 
-<span class="pagesub"><a href="/PageEditor">Create a new Page</a></span>
+<span class="pagesub"><a href="/PageEditor">Create a new Page</a></span><br />
 
 <table>
     <tr><th>URI</th><th>Template</th><th>Mobile?</th><th>Published?</th><th></th></tr>
