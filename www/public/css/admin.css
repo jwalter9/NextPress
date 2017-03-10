@@ -16,8 +16,11 @@ tr:nth-child(even) { background-color: #EEEEEE; }
 #page-name { font: 24px bold; margin-top: 5px; }
 span.pagesub { float: right; margin-right: 64px; }
 li.editor-entry { float: right; }
+li.spacer { height: 12px; }
 li.tiles { float: left; padding: 25px; font-weight: bold; text-decoration: none; text-align: center; }
 div.spacer { height: 40px; }
+div.config-section { margin-top: 40px; }
+span.config-section { margin-left: 40px; font-weight: bold; font-size: 20px; }
 .mce-container,.mce-container *,.mce-widget,.mce-widget *,.mce-reset { z-index: -1; }
 
 .dd { position: relative; display: block; margin: 0; padding: 0; max-width: 600px; list-style: none; font-size: 13px; line-height: 20px; }

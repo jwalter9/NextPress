@@ -218,7 +218,7 @@ function saveCategories(){
 $(document).ready(function() {
 	
 	tinymce.init({
-		selector: "textarea",
+		selector: "textarea#editor",
 		theme: "modern",
 		plugins: [
 	        	"advlist autolink lists link image charmap print preview hr anchor pagebreak",

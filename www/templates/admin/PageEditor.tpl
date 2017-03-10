@@ -29,7 +29,7 @@
     </div>
     <div class="spacer"></div>
     <div id="editor">
-        <textarea id="page-content" name="pageContent"><# pageContent #></textarea>
+        <textarea id="editor" name="pageContent"><# pageContent #></textarea>
     </div>
 </form>
 <# INCLUDE dropinDiv #>
