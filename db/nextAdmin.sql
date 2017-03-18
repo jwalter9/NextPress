@@ -28,14 +28,18 @@ CREATE PROCEDURE `Login` (IN eaddr VARCHAR(1024), IN passwd VARCHAR(256),
 BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     SELECT `id` INTO userId FROM `nextData`.`users`
-        WHERE `email` = eaddr AND `password` = MD5(passwd) AND `prohibited` = 0
+        WHERE `email` = eaddr AND `password` = SHA2(passwd, 512) AND `prohibited` = 0
         LIMIT 1;
     IF userId > 0 THEN
         SELECT `redirect` INTO redir FROM `nextData`.`sessions`
             WHERE `id` = @mvp_session AND `ipAddress` = @mvp_remoteip;
+        IF redir IS NULL OR redir = '' OR redir = 'Login' THEN
+            SET redir = 'Dashboard';
+        END IF;
         REPLACE INTO `nextData`.`sessions` (`id`,`idUser`,`ipAddress`,`redirect`)
             VALUES (@mvp_session, userId, @mvp_remoteip, 'Dashboard');
         SET @mvp_template = 'redirect';
+        SET @mvp_layout = 'popup';
     ELSE
         IF eaddr IS NOT NULL AND eaddr != '' THEN
             SET @err = 'Sorry, we didn&squot;t recognize your login credentials.';
@@ -153,7 +157,7 @@ BEGIN
             WHERE `uri` = pageUri AND `mobile` = pageMobile LIMIT 1;
         SELECT * FROM `nextData`.`media` ORDER BY `dtAdded` DESC;
         SELECT * FROM `nextData`.`dropins` WHERE `active` = 1;
-        CALL `adminMenu`();
+        SET @mvp_layout = 'popup';
     ELSE
         SET @mvp_template = 'Login';
         SET @err = 'Please log in with Admin privileges';
@@ -206,13 +210,12 @@ BEGIN
     END IF;
 END $$
 
-DROP PROCEDURE IF EXISTS `AddMedia` $$
-CREATE PROCEDURE `AddMedia` (IN upload VARCHAR(1024), IN fname VARCHAR(1024),
+DROP PROCEDURE IF EXISTS `addMedia` $$
+CREATE PROCEDURE `addMedia` (IN upload VARCHAR(1024), IN fname VARCHAR(1024),
                              OUT newId BIGINT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
     DECLARE nUri, tUri VARCHAR(1024) DEFAULT '';
-    SET @mvp_layout = 'popup';
     SET newId = 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId = 0 THEN
@@ -430,10 +433,10 @@ BEGIN
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, NULL);
     IF userId > 0 THEN
         SELECT COUNT(`id`) INTO chk FROM `nextData`.`users`
-            WHERE `id` = userId AND `password` = MD5(oldPass);
+            WHERE `id` = userId AND `password` = SHA2(oldPass, 512);
         IF chk = 1 THEN
             UPDATE `nextData`.`users` 
-                SET `password` = MD5(newPass) WHERE `id` = userId;
+                SET `password` = SHA2(newPass, 512) WHERE `id` = userId;
         ELSE
             SET @err = 'Current Password does not match.';
         END IF;
@@ -531,7 +534,8 @@ END $$
 
 DROP PROCEDURE IF EXISTS `ArticleEditor` $$
 CREATE PROCEDURE `ArticleEditor` (INOUT articleId BIGINT, IN contentin text, 
-                                  IN titlein varchar(256), IN uriin varchar(256))
+                                  IN titlein varchar(256), IN uriin varchar(256),
+                                  IN catId BIGINT, OUT catSelect TEXT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
@@ -545,23 +549,21 @@ BEGIN
                     `content` = `nextData`.`descript`(contentin),
                     `teaser` = `nextData`.`tease`(contentin),
                     `title` = `nextData`.`descript`(titlein),
-                    `uri` = `nextData`.`urize`(uriin)
+                    `uri` = `nextData`.`urize`(uriin),
+                    `idCategory` = catId
                 WHERE `id` = articleId;
+                SET chk = `nextData`.`resetArticleCategories`(articleId);
             END IF;
         END IF;
         SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
         SELECT * FROM `nextData`.`media` ORDER BY `dtAdded` DESC;
-        SELECT `categories`.* FROM `nextData`.`categories` 
-            LEFT JOIN `nextData`.`article_categories` 
-            ON `categories`.`id` = `article_categories`.`idCategory`
-            AND `article_categories`.`idArticle` = articleId
-            ORDER BY `categories`.`ord`;
+        SET catSelect = `nextData`.`catSelector`(articleId);
         SELECT `tags`.*, `article_tags`.`idArticle` 
             FROM `nextData`.`tags` LEFT JOIN `nextData`.`article_tags` 
             ON `tags`.`id` = `article_tags`.`idTag`
             AND `article_tags`.`idArticle` = articleId
             ORDER BY `tags`.`displayName`;
-        CALL `adminMenu`();
+        SET @mvp_layout = 'popup';
     ELSE
         SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author');
         IF articleId IS NOT NULL AND articleId > 0 THEN
@@ -581,18 +583,16 @@ BEGIN
                         `content` = `nextData`.`descript`(contentin),
                         `teaser` = `nextData`.`tease`(contentin),
                         `title` = `nextData`.`descript`(titlein),
-                        `uri` = `nextData`.`urize`(uriin)
+                        `uri` = `nextData`.`urize`(uriin),
+                        `idCategory` = catId
                     WHERE `id` = articleId;
+                    SET chk = `nextData`.`resetArticleCategories`(articleId);
                 END IF;
             END IF;
             SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
             SELECT * FROM `nextData`.`media` 
                 WHERE `idAuthor` = userId ORDER BY `dtAdded` DESC;
-            SELECT `categories`.* FROM `nextData`.`categories` 
-                LEFT JOIN `nextData`.`article_categories` 
-                ON `categories`.`id` = `article_categories`.`idCategory`
-                AND `article_categories`.`idArticle` = articleId
-                ORDER BY `categories`.`ord`;
+            SET catSelect = `nextData`.`catSelector`(articleId);
             SELECT `tags`.*, `article_tags`.`idArticle` 
                 FROM `nextData`.`tags` LEFT JOIN `nextData`.`article_tags` 
                 ON `tags`.`id` = `article_tags`.`idTag`
@@ -672,47 +672,13 @@ BEGIN
     END IF;
 END $$
 
-DROP PROCEDURE IF EXISTS `articleCategory` $$
-CREATE PROCEDURE `articleCategory` (IN articleId BIGINT, IN catId BIGINT, IN invRev TINYINT)
-BEGIN
-    DECLARE userId, catLineage, chk BIGINT DEFAULT 0;
-    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
-    IF userId = 0 THEN
-        SELECT `idAuthor` INTO chk FROM `nextData`.`articles` 
-            WHERE `id` = articleId LIMIT 1;
-        IF chk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author') THEN
-            SET userId = chk;
-        END IF;
-    END IF;
-    
-    IF userId > 0 THEN
-        DELETE FROM `nextData`.`article_categories` WHERE `idArticle` = articleId;
-        IF invRev = 1 THEN
-            SET catLineage = catId;
-            WHILE catLineage > 0 DO
-                INSERT INTO `nextData`.`article_categories` (`idArticle`,`idCategory`)
-                    VALUES (articleId, catLineage);
-                SELECT `idParent` INTO catLineage FROM `nextData`.`categories`
-                    WHERE `id` = catLineage;
-            END WHILE;
-            UPDATE `nextData`.`articles` SET `idCategory` = catId 
-                WHERE `id` = articleId;
-        ELSE
-            UPDATE `nextData`.`articles` SET `idCategory` = 0
-                WHERE `id` = articleId;
-        END IF;
-    ELSE
-        SET @err = 'Please log in with Editor or Author access.';
-    END IF;
-END $$
-
 DROP PROCEDURE IF EXISTS `Categories` $$
 CREATE PROCEDURE `Categories` (OUT htmlCategories TEXT)
 BEGIN
     DECLARE userId, tmpord BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
-        SET htmlCategories = `nextData`.`categoriesHtml`(0);
+        SET htmlCategories = `nextData`.`categoriesHtml`();
         CALL `adminMenu`();
     ELSE
         SET @err = 'Please log in with Admin privileges.';
@@ -725,15 +691,16 @@ END $$
 DROP PROCEDURE IF EXISTS `UpdateCategories` $$
 CREATE PROCEDURE `UpdateCategories` (INOUT htmlCategories TEXT)
 BEGIN
-    DECLARE userId BIGINT DEFAULT 0;
-    DECLARE chk TINYINT;
+    DECLARE userId, chk BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
-        UPDATE `nextData`.`categories` SET `ord` = 0;
-        SET htmlCategories = `nextData`.`categoryOlParse`(htmlCategories, 0);
-        SET chk = `nextData`.`resetArticleCategories`();
-        SET htmlCategories = `nextData`.`categoriesHtml`(0);
+        SET chk = `nextData`.`categoryHtmlParse`(htmlCategories);
+        IF chk > 0 THEN
+            SET chk = `nextData`.`resetArticleCategories`(NULL);
+        END IF;
+        SET htmlCategories = `nextData`.`categoriesHtml`();
         SET @mvp_template = 'Categories';
+        SET @err = 'Categories Successfully Updated';
         CALL `adminMenu`();
     ELSE
         SET @err = 'Please log in with Admin privileges.';
@@ -894,7 +861,7 @@ BEGIN
         SET @err = 'Comments are closed for this article';
     ELSE
         IF eaddr IS NOT NULL AND eaddr != '' AND pass IS NOT NULL AND pass != '' THEN
-            SELECT `idUser` INTO schk FROM `nextData`.`users` WHERE `email` = eaddr AND `password` = MD5(pass) LIMIT 1;
+            SELECT `idUser` INTO schk FROM `nextData`.`users` WHERE `email` = eaddr AND `password` = SHA2(pass, 512) LIMIT 1;
             IF schk > 0 THEN
                 REPLACE INTO `nextData`.`sessions` (`id`,`idUser`,`ipAddress`) VALUES (@mvp_session, schk, @mvp_remoteip);
             ELSE
@@ -956,7 +923,7 @@ BEGIN
 END $$
 
 DROP PROCEDURE IF EXISTS `WPImport` $$
-CREATE PROCEDURE `WPImport` (IN xmlFile VARCHAR(1024))
+CREATE PROCEDURE `WPImport` (IN xmlFile VARCHAR(1024), OUT messg VARCHAR(48))
 BEGIN
     DECLARE xml, parseText, itemXML, itemType, parseItem TEXT DEFAULT '';
     DECLARE baseURL, blogURL, linkURL VARCHAR(1024) DEFAULT '';
@@ -1123,6 +1090,8 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
         
         SET parseText = SUBSTR(parseText, LOCATE('</item>', parseText) + 7);
     END WHILE;
+    
+    SET messg = 'Import Successful';
 ELSE
   SET @err = 'Please log in with Admin privileges';
 END IF;

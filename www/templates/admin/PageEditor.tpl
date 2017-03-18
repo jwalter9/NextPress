@@ -22,8 +22,8 @@
                 <input type="text" name="pageTpl" id="pageTpl" value="<# pageTpl #>" onkeyup="previewTpl();" />
             </li>
             <li class="editor-entry">
-                Page Uri: <i>http://your-domain/</i><label id="uri-preview" />
-                <input type="text" name="pageUri" id="pageUri" value="<# pageUri #>" onkeyup="previewUri();" />
+                Page Uri: <i>http://your-domain/</i>
+                <input type="text" name="pageUri" id="uri" value="<# pageUri #>" onkeyup="makeUri(this);" />
             </li>
         </ul>
     </div>

@@ -2,11 +2,11 @@
     <input type="hidden" id="articleId" name="articleId" value="<# articles.id #>"/>
     <p> Title: <input type="text" id="titlein" onkeyup="makeUri(this);" name="titlein" value="<# articles.title #>" size="50"/></p>
     <p> URI: <input type="text" id="uriin" name="uriin" value="<# articles.uri #>" size="40"/></p>
+    <# IF catSelect #><p> Category: <# catSelect #></p><# ENDIF #>
     <p><textarea id="editor" name="contentin"><# articles.content #></textarea></p>
     <p style="width: 1024px; text-align: center;"> <input type="submit" value="  Save Article  "/></p>
 </form>
 
 <# INCLUDE tagDiv #>
-<# INCLUDE catDiv #>
 <# INCLUDE mediaDiv #>
 

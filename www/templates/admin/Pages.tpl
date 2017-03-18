@@ -8,7 +8,7 @@
         <td><# tpl #></td>
         <td><# IF mobile > 0 #>yes<# ELSE #>no<# ENDIF #></td>
         <td><# IF published > 0 #>yes<# ELSE #>no<# ENDIF #></td>
-        <td><a href="/PageEditor?pageUri=<# uri #>&pageMobile=<# mobile #>">edit</a></td>
+        <td><a href="/PageEditor?pageUri=<# uri #>&pageMobile=<# mobile #>" target="_blank">edit</a></td>
     </tr><# ENDLOOP #>
 </table>
 

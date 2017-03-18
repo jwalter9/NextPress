@@ -1,7 +1,7 @@
 
 <form action="Users" method="post">
 <ul>
-    <li class="horiz"><span class="horiz-head">Filters</span></li>
+    <li class="horiz"><span class="config-section">Filters</span></li>
     <li class="horiz spacer"></li>
     <li class="horiz"><span class="horiz-label">Role:</span></li>
     <li class="horiz"><select name="roleId"><# LOOP roles #>
@@ -15,9 +15,12 @@
 </ul>
 </form>
 
+<div class="spacer"></div>
+
 <table>
-    <tr><th>Avatar</th><th>Display Name</th><th>Email Address</th><th>Url</th><th>Roles</th><th>Prohibited?</th></tr>
+    <tr><th>ID</th><th>Avatar</th><th>Display Name</th><th>Email Address</th><th>Url</th><th>Roles</th><th>Prohibited?</th></tr>
     <# LOOP users #><tr>
+        <td><# id #></td>
         <td><# IF avatarUri #><img src="<# avatarUri #>" /><# ENDIF #></td>
         <td><# displayName #></td>
         <td><a href="mailto:<# email #>"><# email #></a></td>

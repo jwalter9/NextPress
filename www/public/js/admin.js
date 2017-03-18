@@ -105,7 +105,7 @@ function makeUri(inp){
     uri = uri.replace(/-/g, '_');
     uri = uri.replace(/\W/g, '');
     uri = uri.replace(/_/g, '-');
-    document.getElementById('uriin').value = uri;
+    document.getElementById('uri').value = uri;
 }
 
 function moreArticles(id){
@@ -189,29 +189,45 @@ $(document).ready(function()
     $('#nestable').nestable();
 });
 
-var catLiBeingEdited;
+var newCatIter = 0;
 
 function newCategory(){
-    $("#dispName").value = '';
-    $("#uriin").value = '';
-    var $newLi = $('<li class="dd-item" data-id="" data-uri=""><div class="dd-handle"></div></li>');
-    $("#parent0").append($newLi);
-    catLiBeingEdited = $newLi;
+    var newCatIter = document.getElementById('newCatIter').value;
+    newCatIter++;
+    document.getElementById('dispName').value = '';
+    document.getElementById('uri').value = '';
+    var $newLi = $('<li class="dd-item" data-id=""><div id="new'+newCatIter+
+        '" data-uri="" class="dd-handle" onmousedown="editCategory(this);"></div></li>');
+    $('#parent1').append($newLi);
+    document.getElementById('beingEdited').value = "new"+newCatIter;
+    document.getElementById('newCatIter').value = newCatIter;
 }
 
-function editCategory(li){
-    catLiBeingEdited = li;
-    $("#dispName").value = li.find("div").innerHTML;
-    $("#uriin").value = li.attr("data-uri");
+function editCategory(dv){
+    document.getElementById('beingEdited').value = dv.getAttribute('id');
+    document.getElementById('dispName').value = dv.innerHTML;
+    document.getElementById('uri').value = dv.getAttribute("data-uri");
 }
 
 function updateCategory(){
-    catLiBeingEdited.find("div").innerHTML = $("#dispName").value;
-    catLiBeingEdited.attr("data-uri", $("#uriin").value);
+    var editId = document.getElementById('beingEdited').value;
+    var editCat = document.getElementById(editId);
+    editCat.innerHTML = document.getElementById('dispName').value;
+    editCat.setAttribute("data-uri", document.getElementById('uri').value);
+}
+
+function removeCategory(){
+    var editId = document.getElementById('beingEdited').value;
+    var editCat = document.getElementById(editId);
+    var parentCat = editCat.parentNode;
+    parentCat.remove(editCat);
+    document.getElementById('dispName').value = "";
+    document.getElementById('uri').value = "";
+    document.getElementById('beingEdited').value = "";
 }
 
 function saveCategories(){
-    $("#htmlCategories").value = $("#nestable").innerHTML;
+    document.getElementById('htmlCategories').value = document.getElementById('nestable').innerHTML;
     return true;
 }
 
@@ -219,6 +235,31 @@ $(document).ready(function() {
 	
 	tinymce.init({
 		selector: "textarea#editor",
+		file_picker_types: 'file image',
+		file_picker_callback: function(cb, value, meta) {
+		    var input = document.createElement('input');
+		    input.setAttribute('type', 'file');
+		    input.onchange = function() {
+		        var file = this.files[];
+		        var id = 'blobid' + (new Date()).getTime();
+		        var blobCache = tinymce.activeEditor.editorUpload.blobCache;
+		        var blobInfo = blobCache.create(id, file);
+		        blobCache.add(blobInfo);
+		        cb(blobInfo.blobUri(), { title: file.name });
+		    };
+		    input.click();
+		},
+		images_upload_handler: function (blobInfo, success, failure) {
+		    $.ajax({
+                url: "/addMedia",
+                data: { upload: blobInfo.blob(), fname: blobInfo.filename() },
+                dataType: "json",
+                cache: false
+            }).done(function( data ) {
+                if( data.PROC_OUT[0].err != '' ) failure(data.PROC_OUT[0].err);
+                else success(data.media[0].uri);
+            });
+		},
 		theme: "modern",
 		plugins: [
 	        	"advlist autolink lists link image charmap print preview hr anchor pagebreak",
@@ -229,7 +270,14 @@ $(document).ready(function() {
 	        toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link media",
 	        content_css: "/css/admin.css",
 	        width: $(document).width,
-	        height: $(document).height
+	        height: 700
         });
+    
+    $(".dd-handle").click( function(){ 
+            alert("wtf?");
+            catLiBeingEdited = $(this).parent();
+            $('#dispName').value = $(this).innerHTML;
+            $('#uri').value = $(this).parent().attr("data-uri");
         });
+});
 

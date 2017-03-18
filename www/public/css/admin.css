@@ -12,16 +12,21 @@ tr:nth-child(even) { background-color: #EEEEEE; }
 #mainMenuList { display: none; position: absolute; min-width: 260px; z-index: 1; top: 32px; }
 #dropList li { float: none; background: #444444; padding: 5px; padding-top: 10px; }
 #dropList li a { text-decoration: none; color: #EEEEEE; }
-#pageDiv { margin: 40px auto; }
+#pageDiv { margin: 50px auto; }
 #page-name { font: 24px bold; margin-top: 5px; }
+#cat-edit { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: fixed; top: 60px; right: 0px; }
+#nestable { margin: auto; padding-top: 50px; }
 span.pagesub { float: right; margin-right: 64px; }
 li.editor-entry { float: right; }
-li.spacer { height: 12px; }
+li.spacer { height: 12px; width: 20px; }
+li.horiz { float: left; }
 li.tiles { float: left; padding: 25px; font-weight: bold; text-decoration: none; text-align: center; }
 div.spacer { height: 40px; }
 div.config-section { margin-top: 40px; }
+div.form-div { background: #EEEEEE; padding: 20px; margin: 40px; float: left; }
 span.config-section { margin-left: 40px; font-weight: bold; font-size: 20px; }
-.mce-container,.mce-container *,.mce-widget,.mce-widget *,.mce-reset { z-index: -1; }
+span.err { margin-left: 40px; font-weight: bold; font-size: 20px; color: #AA4444; }
+span.notice { padding-left: 40px; font-size: 11px; }
 
 .dd { position: relative; display: block; margin: 0; padding: 0; max-width: 600px; list-style: none; font-size: 13px; line-height: 20px; }
 

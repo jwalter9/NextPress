@@ -424,146 +424,251 @@ BEGIN
     END IF;
 END $$
 
-DROP FUNCTION IF EXISTS `getTemplate` $$
-
 DROP FUNCTION IF EXISTS `categoriesHtml` $$
-CREATE FUNCTION `categoriesHtml` (parentId BIGINT) RETURNS TEXT
+CREATE FUNCTION `categoriesHtml` () RETURNS TEXT
 READS SQL DATA
 BEGIN
-    DECLARE done INT DEFAULT 0;
-    DECLARE cid BIGINT DEFAULT 0;
+    DECLARE done, pos, deep INT DEFAULT 0;
+    DECLARE cid, pid, parentId, prevCatId BIGINT DEFAULT 0;
     DECLARE curi, cname VARCHAR(1024);
-    DECLARE listHtml TEXT DEFAULT '';
-    DECLARE cursr CURSOR FOR SELECT `id`, `uri`, `displayName` 
-        FROM `categories` WHERE `idParent` = parentId ORDER BY `ord`;
+    DECLARE listHtml TEXT DEFAULT '<ol class="dd-list" id="parent1">';
+    DECLARE queue TEXT DEFAULT '1|';
+    DECLARE cursr CURSOR FOR SELECT `id`, `idParent`, `uri`, `displayName` 
+        FROM `categories` WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET parentId = 1;
     OPEN cursr;
     REPEAT
-        FETCH cursr INTO cid, curi, cname;
+        FETCH cursr INTO cid, pid, curi, cname;
         IF NOT done THEN
-            IF listHtml = '' THEN
-                SET listHtml = CONCAT('<ol class="dd-list" id="parent',parentId,'">');
+            IF prevCatId > 0 AND pid = parentId THEN
+                SET listHtml = CONCAT(listHtml, '</li>');
+            END IF;
+            IF pid != parentId THEN
+                IF pid = prevCatId THEN
+                    SET deep = deep + 1;
+                    SET listHtml = CONCAT(listHtml, '<ol class="dd-list" id="parent', pid, '">');
+                    SET queue = CONCAT(pid, '|', queue);
+                    SET parentId = pid;
+                ELSE
+                    WHILE parentId != pid DO
+                        SET deep = deep - 1;
+                        SET listHtml = CONCAT(listHtml, '</ol></li>');
+                        SET queue = SUBSTR(queue, LOCATE('|', queue) + 1);
+                        SET pos = LOCATE('|', queue);
+                        SET parentId = SUBSTR(queue, 1, pos - 1);
+                    END WHILE;
+                END IF;
             END IF;
             SET listHtml = CONCAT(listHtml,'<li class="dd-item" data-id="',cid,
-                                  '" data-uri="',curi,'"><div class="dd-handle">',
-                                  cname,'</div>',`categoriesHtml`(cid),'</li>');
+                                  '"><div id="',cid,'" class="dd-handle" data-uri="',curi,
+                                  '" onmousedown="editCategory(this);">',cname,'</div>');
+            SET prevCatId = cid;
         END IF;
     UNTIL done END REPEAT;
     CLOSE cursr;
-    IF listHtml != '' THEN
-        SET listHtml = CONCAT(listHtml,'</ol>');
-    END IF;
+    WHILE deep > -1 DO
+        SET deep = deep - 1;
+        SET listHtml = CONCAT(listHtml,'</li></ol>');
+    END WHILE;
+    RETURN listHtml;
+END $$
+
+DROP FUNCTION IF EXISTS `categorySelector` $$
+CREATE FUNCTION `categorySelector` (articleId BIGINT) RETURNS TEXT
+READS SQL DATA
+BEGIN
+    DECLARE done, pos, deep, pub INT DEFAULT 0;
+    DECLARE cid, pid, parentId, prevCatId, catSelected BIGINT DEFAULT 0;
+    DECLARE curi, cname, indent VARCHAR(1024) DEFAULT '';
+    DECLARE listHtml TEXT DEFAULT '<select name="catId"><option>Select a Category</option>';
+    DECLARE queue TEXT DEFAULT '1|';
+    DECLARE cursr CURSOR FOR SELECT `id`, `idParent`, `uri`, `displayName`, `pages`.`published`
+        FROM `categories` LEFT JOIN `pages` ON `categories`.`uri` = `pages`.`uri`
+        WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    SELECT `idCategory` INTO catSelected FROM `articles` WHERE `id` = articleId;
+    SET parentId = 1;
+    OPEN cursr;
+    REPEAT
+        FETCH cursr INTO cid, pid, curi, cname, pub;
+        IF NOT done THEN
+            IF pid != parentId THEN
+                IF pid = prevCatId THEN
+                    SET deep = deep + 1;
+                    SET indent = REPEAT('&nbsp;&nbsp;', deep);
+                    SET queue = CONCAT(pid, '|', queue);
+                    SET parentId = pid;
+                ELSE
+                    WHILE parentId != pid DO
+                        SET deep = deep - 1;
+                        SET indent = REPEAT('&nbsp;&nbsp;', deep);
+                        SET queue = SUBSTR(queue, LOCATE('|', queue) + 1);
+                        SET pos = LOCATE('|', queue);
+                        SET parentId = SUBSTR(queue, 1, pos - 1);
+                    END WHILE;
+                END IF;
+            END IF;
+            IF pub IS NULL OR pub = 0 THEN
+                IF pid != catSelected THEN
+                    SET listHtml = CONCAT(listHtml,'<option value="',cid,
+                                          '">',indent,REPLACE(cname,'"',''),'</option>');
+                ELSE
+                    SET listHtml = CONCAT(listHtml,'<option value="',cid,
+                                          '" selected="selected">',
+                                          indent,REPLACE(cname,'"',''),'</option>');
+                END IF;
+            END IF;
+            SET prevCatId = cid;
+        END IF;
+    UNTIL done END REPEAT;
+    CLOSE cursr;
+    SET listHtml = CONCAT(listHtml,'</select>');
     RETURN listHtml;
 END $$
 
 DROP FUNCTION IF EXISTS `publicCategories` $$
-CREATE FUNCTION `publicCategories` (parentId BIGINT) RETURNS TEXT
+CREATE FUNCTION `publicCategories` () RETURNS TEXT
 READS SQL DATA
 BEGIN
-    DECLARE done INT DEFAULT 0;
-    DECLARE cid BIGINT DEFAULT 0;
+    DECLARE done, pos, deep INT DEFAULT 0;
+    DECLARE cid, pid, parentId, prevCatId BIGINT DEFAULT 0;
     DECLARE curi, cname VARCHAR(1024);
-    DECLARE listHtml TEXT DEFAULT '';
-    DECLARE cursr CURSOR FOR SELECT `categories`.`id`, `categories`.`uri`, 
-            `categories`.`displayName`
+    DECLARE listHtml TEXT DEFAULT '<ol class="cat-list">';
+    DECLARE queue TEXT DEFAULT '1|';
+    DECLARE cursr CURSOR FOR SELECT `categories`.`id`, `categories`.`idParent`,
+            `categories`.`uri`, `categories`.`displayName`
         FROM `categories`
         JOIN `article_categories` 
             ON `categories`.`id` = `article_categories`.`idCategory`
         JOIN `articles` 
             ON `article_categories`.`idArticle` = `articles`.`id`
             AND `articles`.`dtPublish` IS NOT NULL 
-        WHERE `categories`.`idParent` = parentId 
+        WHERE `categories`.`id` > 1 AND `categories`.`ord` > 0 
+            AND `categories`.`idParent` = parentId 
         GROUP BY `categories`.`id` ORDER BY `categories`.`ord`;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     OPEN cursr;
     REPEAT
-        FETCH cursr INTO cid, curi, cname;
+        FETCH cursr INTO cid, pid, curi, cname;
         IF NOT done THEN
-            IF listHtml = '' THEN
-                SET listHtml = '<ol class="cat-list">';
+            IF prevCatId > 0 AND pid = parentId THEN
+                SET listHtml = CONCAT(listHtml, '</li>');
+            END IF;
+            IF pid != parentId THEN
+                IF pid = prevCatId THEN
+                    SET deep = deep + 1;
+                    SET listHtml = CONCAT(listHtml, '<ol class="cat-list">');
+                    SET queue = CONCAT(pid, '|', queue);
+                    SET parentId = pid;
+                ELSE
+                    WHILE parentId != pid DO
+                        SET deep = deep - 1;
+                        SET listHtml = CONCAT(listHtml, '</ol></li>');
+                        SET queue = SUBSTR(queue, LOCATE('|', queue) + 1);
+                        SET pos = LOCATE('|', queue);
+                        SET parentId = SUBSTR(queue, 1, pos - 1);
+                    END WHILE;
+                END IF;
             END IF;
             SET listHtml = CONCAT(listHtml,'<li class="cat-item"><a href="',curi,
-                                  '">',cname,'</a>',`publicCategories`(cid),'</li>');
+                                  '">',cname,'</a>');
+            SET prevCatId = cid;
         END IF;
     UNTIL done END REPEAT;
     CLOSE cursr;
-    IF listHtml != '' THEN
-        SET listHtml = CONCAT(listHtml,'</ol>');
-    END IF;
+    WHILE deep > -1 DO
+        SET deep = deep - 1;
+        SET listHtml = CONCAT(listHtml,'</li></ol>');
+    END WHILE;
     RETURN listHtml;
 END $$
 
-DROP FUNCTION IF EXISTS `categoryLiParse` $$
-CREATE FUNCTION `categoryLiParse` (html TEXT, parentId BIGINT) RETURNS TEXT
+DROP FUNCTION IF EXISTS `categoryHtmlParse` $$
+CREATE FUNCTION `categoryHtmlParse` (html TEXT) RETURNS BIGINT
 MODIFIES SQL DATA
 BEGIN
-    DECLARE catId, maxOrd BIGINT DEFAULT 0;
+    DECLARE catId, maxOrd, parentId BIGINT DEFAULT 0;
     DECLARE curi, cname VARCHAR(1024) DEFAULT '';
+    DECLARE queue TEXT DEFAULT '1|';
     DECLARE pos, len INT DEFAULT 0;
-    SET pos = LOCATE('data-id="', html) + 9;
-    SET len = LOCATE('"', html, pos) - pos;
-    SET catId = SUBSTR(html, pos, len);
-    SET pos = LOCATE('data-uri="', html) + 10;
-    SET len = LOCATE('"', html, pos) - pos;
-    SET curi = `urize`(SUBSTR(html, pos, len));
-    SET pos = LOCATE('<div', html) + 4;
-    SET pos = LOCATE('>', html, pos) + 1;
-    SET len = LOCATE('</div>', html, pos) - pos;
-    SET cname = SUBSTR(html, pos, len);
-    SELECT MAX(`ord`) INTO maxOrd FROM `categories`;
-    IF catId IS NULL OR catId = 0 THEN
-        INSERT INTO `categories` (`idParent`,`uri`,`displayName`,`ord`)
-            VALUES (parentId, curi, cname, maxOrd + 1);
-        SET catId = LAST_INSERT_ID();
-    ELSE
-        UPDATE `categories` SET `idParent` = parentId, `uri` = curi, 
-                                `displayName` = cname, `ord` = maxOrd + 1
-            WHERE `id` = catId;
-    END IF;
-    SET html = SUBSTR(html, LOCATE('</div', html) + 4);
-    SET pos = LOCATE('<ol', html);
-    SET len = LOCATE('</li', html);
-    IF pos > 0 AND len > pos THEN
-        SET html = `categoryOlParse`(html, catId);
-    END IF;
-    RETURN html;
-END $$
 
-DROP FUNCTION IF EXISTS `categoryOlParse` $$
-CREATE FUNCTION `categoryOlParse` (html TEXT, parentId BIGINT) RETURNS TEXT
-MODIFIES SQL DATA
-BEGIN
-    WHILE LOCATE('</ol', html) > 0 AND LOCATE('<li', html) > 0
-          AND LOCATE('</ol', html) > LOCATE('<li', html) DO
-        SET html = `categoryLiParse` (html, parentId);
+    SET parentId = 1;
+    UPDATE `categories` SET `ord` = 0;
+    WHILE LOCATE('<li', html) > 0 DO
+        SET pos = LOCATE('</ol>', html);
+        WHILE pos > 0 AND pos < LOCATE('<li', html) DO
+            SET html = SUBSTR(html, pos + 4);
+            SET queue = SUBSTR(queue, LOCATE('|', queue) + 1);
+            SET pos = LOCATE('|', queue);
+            SET parentId = SUBSTR(queue, 1, pos - 1);
+            SET pos = LOCATE('</ol>', html);
+        END WHILE;
+        SET pos = LOCATE('data-id="', html) + 9;
+        SET len = LOCATE('"', html, pos) - pos;
+        SET catId = SUBSTR(html, pos, len);
+        SET pos = LOCATE('data-uri="', html) + 10;
+        SET len = LOCATE('"', html, pos) - pos;
+        SET curi = `urize`(SUBSTR(html, pos, len));
+        SET pos = LOCATE('<div', html) + 4;
+        SET pos = LOCATE('>', html, pos) + 1;
+        SET len = LOCATE('</div>', html, pos) - pos;
+        SET cname = `descript`(SUBSTR(html, pos, len));
+        SELECT MAX(`ord`) INTO maxOrd FROM `categories`;
+        IF catId IS NULL OR catId = 0 THEN
+            INSERT INTO `categories` (`idParent`,`uri`,`displayName`,`ord`)
+                VALUES (parentId, curi, cname, maxOrd + 1);
+            SET catId = LAST_INSERT_ID();
+        ELSE
+            UPDATE `categories` SET `idParent` = parentId, `uri` = curi, 
+                                    `displayName` = cname, `ord` = maxOrd + 1
+            WHERE `id` = catId;
+        END IF;
+        SET html = SUBSTR(html, LOCATE('</div', html) + 4);
+        SET pos = LOCATE('<ol', html);
+        SET len = LOCATE('</li', html);
+        IF pos > 0 AND len > pos THEN
+            SET queue = CONCAT(catId, '|', queue);
+            SET parentId = catId;
+        END IF;
     END WHILE;
-    IF LOCATE('</ol', html) > 0 THEN
-        SET html = SUBSTR(html, LOCATE(html, '</ol') + 4);
-    END IF;
-    RETURN html;
+    RETURN maxOrd + 1;
 END $$
 
 DROP FUNCTION IF EXISTS `resetArticleCategories` $$
-CREATE FUNCTION `resetArticleCategories`() RETURNS TINYINT
+CREATE FUNCTION `resetArticleCategories`(articleId BIGINT) RETURNS TINYINT
 MODIFIES SQL DATA
 BEGIN
     DECLARE catLineage, articleId, catId, done BIGINT DEFAULT 0;
     DECLARE cursr CURSOR FOR SELECT `id`, `idCategory` FROM `articles`;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-    OPEN cursr;
-    REPEAT
-        FETCH cursr INTO articleId, catId;
-        IF NOT done THEN
-            SET catLineage = catId;
-            WHILE catLineage > 0 DO
-                INSERT INTO `nextData`.`article_categories` (`idArticle`,`idCategory`)
-                    VALUES (articleId, catLineage);
-                SELECT `idParent` INTO catLineage FROM `nextData`.`categories`
-                    WHERE `id` = catLineage;
-            END WHILE;
-        END IF;
-    UNTIL done END REPEAT;
-    CLOSE cursr;
+    IF articleId IS NULL THEN
+        OPEN cursr;
+        REPEAT
+            FETCH cursr INTO articleId, catId;
+            IF NOT done THEN
+                SET catLineage = catId;
+                WHILE catLineage > 1 DO
+                    INSERT INTO `article_categories` (`idArticle`,`idCategory`)
+                        VALUES (articleId, catLineage);
+                    SELECT `idParent` INTO catLineage FROM `categories`
+                        WHERE `id` = catLineage;
+                END WHILE;
+            END IF;
+        UNTIL done END REPEAT;
+        CLOSE cursr;
+    ELSE
+        DELETE FROM `nextData`.`article_categories` WHERE `idArticle` = articleId;
+        SELECT `idCategory` INTO catId FROM `articles` WHERE `id` = articleId;
+        SET catLineage = catId;
+        WHILE catLineage > 1 DO
+            INSERT INTO `article_categories` (`idArticle`,`idCategory`)
+                VALUES (articleId, catLineage);
+            SELECT `idParent` INTO catLineage FROM `categories`
+                WHERE `id` = catLineage;
+        END WHILE;
+    END IF;
     RETURN 1;
 END $$
 

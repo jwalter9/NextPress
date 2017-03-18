@@ -92,7 +92,7 @@ echo
 echo -n " Site Admin password: "
 read PAS
 
-mysql -u root --password="$RPWD" -e "UPDATE nextData.users SET email='$EML',password=MD5('$PAS') WHERE displayName='Administrator';"
+mysql -u root --password="$RPWD" -e "UPDATE nextData.users SET email='$EML',password=SHA2('$PAS', 512) WHERE displayName='Administrator';"
 if test $? -ne 0; then
 	echo "ERROR: unable to update admin email and password - nextData.users"
 	exit 1

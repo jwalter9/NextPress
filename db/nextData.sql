@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.49, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.53, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: nextData
 -- ------------------------------------------------------
--- Server version	5.5.49-0ubuntu0.14.04.1
+-- Server version	5.5.53-0ubuntu0.14.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -140,7 +140,7 @@ DROP TABLE IF EXISTS `categories`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `categories` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `idParent` bigint(20) NOT NULL DEFAULT '0',
+  `idParent` bigint(20) NOT NULL DEFAULT '1',
   `uri` varchar(1024) NOT NULL,
   `displayName` varchar(1024) NOT NULL,
   `ord` bigint(20) NOT NULL,
@@ -156,6 +156,7 @@ CREATE TABLE `categories` (
 
 LOCK TABLES `categories` WRITE;
 /*!40000 ALTER TABLE `categories` DISABLE KEYS */;
+INSERT INTO `categories` VALUES (1,1,'','',0);
 /*!40000 ALTER TABLE `categories` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -556,7 +557,7 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `password` varchar(32) DEFAULT NULL,
+  `password` varchar(512) DEFAULT NULL,
   `verifyCode` varchar(32) DEFAULT NULL,
   `displayName` varchar(1024) DEFAULT NULL,
   `email` varchar(1024) DEFAULT NULL,
@@ -574,7 +575,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'d0cab90d8d20d57e2f2b9be52f7dd25d',NULL,'Administrator','change.me@nextpress.org',NULL,NULL,0,0),(2,NULL,NULL,'Guest Commenter',NULL,NULL,NULL,0,0);
+INSERT INTO `users` VALUES (1,'982f630ae2e1e67188b5ae7686f34fbd7a3e6db23e92f40a5080d29a1cdf8efeb68c90e9eaf6f24c2f903f72e1778edd957560ff867c07adb4791c1be1c1f8c8',NULL,'Administrator','change.me@nextpress.org',NULL,NULL,0,0),(2,'982f630ae2e1e67188b5ae7686f34fbd7a3e6db23e92f40a5080d29a1cdf8efeb68c90e9eaf6f24c2f903f72e1778edd957560ff867c07adb4791c1be1c1f8c8',NULL,'Guest Commenter',NULL,NULL,NULL,0,0);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -587,4 +588,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-07-17 18:05:12
+-- Dump completed on 2017-03-11 15:21:03

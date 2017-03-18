@@ -15,7 +15,7 @@
             <input id="pub<# id #>" type="button" value="Unpublish" onclick="unpublish_article(<# id #>);" />
             <# ENDIF #></td>
         <td><a href="/ArticlePreview?articleId=<# id #>">view</a><br />
-            <a href="/ArticleEditor?articleId=<# id #>">edit</a></td>
+            <a href="/ArticleEditor?articleId=<# id #>" target="_blank">edit</a></td>
     </tr><# SET oldest = id #><# ENDLOOP #>
     <# IF @.oldest > earliest #>
     <tr class="artlist-foot">
