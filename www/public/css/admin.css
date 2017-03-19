@@ -15,6 +15,7 @@ tr:nth-child(even) { background-color: #EEEEEE; }
 #pageDiv { margin: 50px auto; }
 #page-name { font: 24px bold; margin-top: 5px; }
 #cat-edit { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: fixed; top: 60px; right: 0px; }
+#new-tag { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: fixed; top: 60px; right: 0px; }
 #nestable { margin: auto; padding-top: 50px; }
 li.editor-entry { float: right; font-size: 12px; }
 li.spacer { height: 12px; width: 20px; }

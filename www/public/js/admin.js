@@ -76,18 +76,6 @@ function updatePass(){
     });
 }
 
-function addMedia(){
-    var filinp = document.getElementById('upload').value;
-    if(filinp == ''){
-        alert('Please select a file to upload.');
-        return false;
-    };
-    filinp = filinp.substring(filinp.lastIndexOf("/") + 1);
-    filinp = filinp.substring(filinp.lastIndexOf("\\") + 1);
-    document.getElementById('fname').value = filinp;
-    return true;
-}
-
 function deleteMedia(id){
     $.ajax({
         url: "/deleteMedia",
@@ -116,6 +104,19 @@ function moreArticles(id){
         cache: false
     }).done(function( data ) {
         document.getElementById('artlist').innerHTML = data;
+    });
+}
+
+function addDropTag(cbox, artid, tagid){
+    var inv = '0';
+    if(cbox.checked) inv = '1';
+    $.ajax({
+        url: "/addDropTag",
+        data: { articleId: artid, tagId: tagid, invRev: inv },
+        dataType: "json",
+        cache: false
+    }).done(function( data ) {
+        if( data.PROC_OUT[0].err != '' ) alert(data.PROC_OUT[0].err);
     });
 }
 

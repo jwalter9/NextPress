@@ -155,8 +155,6 @@ BEGIN
             INTO pageUri, pageTpl, pageMobile, pagePub, pageContent
             FROM `nextData`.`pages` 
             WHERE `uri` = pageUri AND `mobile` = pageMobile LIMIT 1;
-        SELECT * FROM `nextData`.`media` ORDER BY `dtAdded` DESC;
-        SELECT * FROM `nextData`.`dropins` WHERE `active` = 1;
         SET @mvp_layout = 'popup';
     ELSE
         SET @mvp_template = 'Login';
@@ -184,6 +182,21 @@ BEGIN
         END IF;
     ELSE
         SET @err = 'Please log in with Admin privileges';
+    END IF;
+END $$
+
+DROP PROCEDURE IF EXISTS `Dropins` $$
+CREATE PROCEDURE `Dropins` ()
+BEGIN
+    DECLARE userId BIGINT DEFAULT 0;
+    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
+    IF userId > 0 THEN
+        SELECT `id`, `img` FROM `nextData`.`dropins` ORDER BY `id`;
+    ELSE
+        SET @mvp_template = 'Login';
+        SET @err = 'Please log in with Admin privileges';
+        REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
+            VALUES (@mvp_session, @mvp_remoteip, 'Pages');
     END IF;
 END $$
 
@@ -570,13 +583,7 @@ BEGIN
             END IF;
         END IF;
         SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
-        SELECT * FROM `nextData`.`media` ORDER BY `dtAdded` DESC;
         SET catSelect = `nextData`.`categorySelector`(articleId);
-        SELECT `tags`.*, `article_tags`.`idArticle` 
-            FROM `nextData`.`tags` LEFT JOIN `nextData`.`article_tags` 
-            ON `tags`.`id` = `article_tags`.`idTag`
-            AND `article_tags`.`idArticle` = articleId
-            ORDER BY `tags`.`displayName`;
         SET @mvp_layout = 'popup';
     ELSE
         SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author');
@@ -604,15 +611,8 @@ BEGIN
                 END IF;
             END IF;
             SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
-            SELECT * FROM `nextData`.`media` 
-                WHERE `idAuthor` = userId ORDER BY `dtAdded` DESC;
             SET catSelect = `nextData`.`catSelector`(articleId);
-            SELECT `tags`.*, `article_tags`.`idArticle` 
-                FROM `nextData`.`tags` LEFT JOIN `nextData`.`article_tags` 
-                ON `tags`.`id` = `article_tags`.`idTag`
-                AND `article_tags`.`idArticle` = articleId
-                ORDER BY `tags`.`displayName`;
-            CALL `adminMenu`();
+            SET @mvp_layout = 'popup';
         ELSE
             SET @mvp_template = 'Login';
             SET @err = 'Please log in with Editor or Author access.';
@@ -660,8 +660,34 @@ BEGIN
     END IF;
 END $$
 
-DROP PROCEDURE IF EXISTS `articleTag` $$
-CREATE PROCEDURE `articleTag` (IN articleId BIGINT, IN tagId BIGINT, IN invRev TINYINT)
+DROP PROCEDURE IF EXISTS `ArticleTags` $$
+CREATE PROCEDURE `ArticleTags` (INOUT articleId BIGINT, OUT artTitle VARCHAR(256))
+BEGIN
+    DECLARE userId, chk BIGINT DEFAULT 0;
+    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
+    IF userId = 0 THEN
+        SELECT `idAuthor` INTO chk FROM `nextData`.`articles` 
+            WHERE `id` = articleId LIMIT 1;
+        IF chk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author') THEN
+            SET userId = chk;
+        END IF;
+    END IF;
+    
+    IF userId > 0 THEN
+        SELECT `tags`.`id`, `tags`.`uri`, `tags`.`displayName`, `article_tags`.`idArticle`
+        FROM `nextData`.`tags` LEFT JOIN `nextData`.`article_tags` 
+            ON `tags`.`id` = `article_tags`.`idTag` 
+            AND `article_tags`.`idArticle` = articleId
+        ORDER BY `tags`.`displayName` ASC;
+        SELECT `title` INTO artTitle FROM `nextData`.`articles` WHERE `id` = articleId;
+    ELSE
+        SET @err = 'Please log in with Editor or Author access.';
+        SET @mvp_template = 'Login';
+    END IF;
+END $$
+
+DROP PROCEDURE IF EXISTS `addDropTag` $$
+CREATE PROCEDURE `addDropTag` (IN articleId BIGINT, IN tagId BIGINT, IN invRev TINYINT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
@@ -681,6 +707,33 @@ BEGIN
             DELETE FROM `nextData`.`article_tags`
                 WHERE `idArticle` = articleId AND `idTag` = tagId;
         END IF;
+    ELSE
+        SET @err = 'Please log in with Editor or Author access.';
+    END IF;
+END $$
+
+DROP PROCEDURE IF EXISTS `NewTag` $$
+CREATE PROCEDURE `NewTag` (INOUT articleId BIGINT, IN tagName VARCHAR(1024), 
+                           IN tagUri VARCHAR(1024), OUT artTitle VARCHAR(256))
+BEGIN
+    DECLARE userId, chk BIGINT DEFAULT 0;
+    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
+    IF userId = 0 THEN
+        SELECT `idAuthor` INTO chk FROM `nextData`.`articles` 
+            WHERE `id` = articleId LIMIT 1;
+        IF chk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author') THEN
+            SET userId = chk;
+        END IF;
+    END IF;
+    
+    IF userId > 0 THEN
+        INSERT INTO `nextData`.`tags` (`uri`, `displayName`)
+            VALUES (`nextData`.`urize`(tagUri), `nextData`.`descript`(tagName));
+        SET chk = LAST_INSERT_ID();
+        INSERT INTO `nextData`.`article_tags` (`idTag`,`idArticle`)
+            VALUES (chk, articleId);
+        CALL `ArticleTags`(articleId, artTitle);
+        SET @mvp_template = 'ArticleTags';
     ELSE
         SET @err = 'Please log in with Editor or Author access.';
     END IF;
@@ -712,6 +765,14 @@ BEGIN
         IF chk > 0 THEN
             SET chk = `nextData`.`resetArticleCategories`(NULL);
         END IF;
+        -- Here we cache the Categories dropin for speed
+        SET htmlCategories = `nextData`.`publicCategories`();
+        SET chk = file_write(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
+                             '/public/dropins/Categories.tpl'),htmlCategories);
+        IF chk = 0 THEN
+            SET chk = `reload_apache`();
+        END IF;
+        
         SET htmlCategories = `nextData`.`categoriesHtml`();
         SET @mvp_template = 'Categories';
         SET @err = 'Categories Successfully Updated';
@@ -722,43 +783,6 @@ BEGIN
         REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
             VALUES (@mvp_session, @mvp_remoteip, 'Categories');
     END IF;
-END $$
-
-DROP PROCEDURE IF EXISTS `modifyTag` $$
-CREATE PROCEDURE `modifyTag` (INOUT tagId BIGINT, IN uriin VARCHAR(1024), 
-                              IN dname VARCHAR(1024), IN invRev TINYINT)
-BEGIN
-    DECLARE userId BIGINT DEFAULT 0;
-    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
-    IF userId = 0 THEN
-        SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
-    END IF;
-    IF userId > 0 THEN
-        IF invRev = 0 THEN
-            DELETE FROM `nextData`.`article_tags` WHERE `idTag` = tagId;
-            DELETE FROM `nextData`.`tags` WHERE `id` = tagId;
-        ELSE
-            IF (tagId IS NULL OR tagId = 0) 
-                AND uriin IS NOT NULL AND dname IS NOT NULL
-                AND TRIM(uriin) != '' AND TRIM(dname) != '' THEN
-                INSERT INTO `nextData`.`tags` (`uri`,`displayName`)
-                    VALUES (`nextData`.`urize`(uriin), dname);
-                SET tagId = LAST_INSERT_ID();
-            ELSE
-                UPDATE `nextData`.`tags` 
-                    SET `uri` = `nextData`.`urize`(uriin), `displayName` = dname
-                    WHERE `id` = tagId;
-            END IF;
-        END IF;
-    ELSE
-        SET @err = 'Please log in with Admin or Editor privileges.';
-    END IF;
-    SELECT `tags`.*, `article_tags`.`idArticle` 
-        FROM `nextData`.`tags` 
-        LEFT JOIN `nextData`.`article_tags` 
-        ON `tags`.`id` = `article_tags`.`idTag`
-        AND `article_tags`.`idArticle` = articleId
-        ORDER BY `tags`.`displayName`;
 END $$
 
 DROP PROCEDURE IF EXISTS `ModerateComments` $$

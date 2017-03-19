@@ -537,18 +537,11 @@ BEGIN
     DECLARE curi, cname VARCHAR(1024);
     DECLARE listHtml TEXT DEFAULT '<ol class="cat-list">';
     DECLARE queue TEXT DEFAULT '1|';
-    DECLARE cursr CURSOR FOR SELECT `categories`.`id`, `categories`.`idParent`,
-            `categories`.`uri`, `categories`.`displayName`
-        FROM `categories`
-        JOIN `article_categories` 
-            ON `categories`.`id` = `article_categories`.`idCategory`
-        JOIN `articles` 
-            ON `article_categories`.`idArticle` = `articles`.`id`
-            AND `articles`.`dtPublish` IS NOT NULL 
-        WHERE `categories`.`id` > 1 AND `categories`.`ord` > 0 
-            AND `categories`.`idParent` = parentId 
-        GROUP BY `categories`.`id` ORDER BY `categories`.`ord`;
+    DECLARE cursr CURSOR FOR SELECT `id`, `idParent`, `uri`, `displayName`
+        FROM `categories` WHERE `categories`.`id` > 1 AND `categories`.`ord` > 0 
+        ORDER BY `categories`.`ord`;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET parentId = 1;
     OPEN cursr;
     REPEAT
         FETCH cursr INTO cid, pid, curi, cname;
