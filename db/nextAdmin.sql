@@ -203,10 +203,19 @@ BEGIN
             ORDER BY `dtAdded` DESC;
         CALL `adminMenu`();
     ELSE
-        SET @mvp_template = 'Login';
-        SET @err = 'Please log in with Admin privileges';
-        REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
-            VALUES (@mvp_session, @mvp_remoteip, 'Media');
+        SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author');
+        IF userId > 0 THEN
+            SELECT `media`.*, `nextData`.`published`(`dtAdded`) AS addedDate, 
+                FROM `nextData`.`media` WHERE `idAuthor` = userId
+                ORDER BY `dtAdded` DESC;
+            CALL `adminMenu`();
+            SET @mvp_template = 'MyMedia';
+        ELSE
+            SET @mvp_template = 'Login';
+            SET @err = 'Please log in with Admin, Editor, or Author privileges';
+            REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
+                VALUES (@mvp_session, @mvp_remoteip, 'Media');
+        END IF;
     END IF;
 END $$
 
@@ -480,13 +489,14 @@ BEGIN
 END $$
 
 DROP PROCEDURE IF EXISTS `Articles` $$
-CREATE PROCEDURE `Articles` (OUT earliest BIGINT)
+CREATE PROCEDURE `Articles` (OUT earliest BIGINT, OUT canPublish VARCHAR(4))
 BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
     IF userId > 0 THEN
-        SELECT `articles`.`id`,`articles`.`teaser`,`articles`.`title`,
-            `articles`.`uri`,`nextData`.`published`(`dtPublish`) AS pubDate,
+        SELECT `articles`.`id`,`articles`.`teaser`,`articles`.`title`, 
+            `articles`.`dtPublish`,`articles`.`uri`,
+            `nextData`.`published`(`dtPublish`) AS pubDate,
             `users`.`displayName`,`users`.`avatarUri`
             FROM `nextData`.`articles` 
             JOIN `nextData`.`users` ON `articles`.`idAuthor` = `users`.`id`
@@ -501,6 +511,10 @@ BEGIN
                 FROM `nextData`.`articles` WHERE `idAuthor` = userId ORDER BY `id` DESC LIMIT 20;
             SET earliest = 0;
             SELECT MIN(`id`) INTO earliest FROM `nextData`.`articles` WHERE `idAuthor` = userId;
+            SET @mvp_template = 'MyArticles';
+            IF `nextData`.`getConfig`('Site','authorSelfPublish') = 'Yes' THEN
+                SET canPublish = 'Y';
+            END IF;
             CALL `adminMenu`();
         ELSE
             SET @mvp_template = 'Login';
@@ -557,7 +571,7 @@ BEGIN
         END IF;
         SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
         SELECT * FROM `nextData`.`media` ORDER BY `dtAdded` DESC;
-        SET catSelect = `nextData`.`catSelector`(articleId);
+        SET catSelect = `nextData`.`categorySelector`(articleId);
         SELECT `tags`.*, `article_tags`.`idArticle` 
             FROM `nextData`.`tags` LEFT JOIN `nextData`.`article_tags` 
             ON `tags`.`id` = `article_tags`.`idTag`

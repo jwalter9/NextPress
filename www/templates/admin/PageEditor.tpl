@@ -28,10 +28,8 @@
         </ul>
     </div>
     <div class="spacer"></div>
-    <div id="editor">
-        <textarea id="editor" name="pageContent"><# pageContent #></textarea>
+    <div id="page-editor">
+        <textarea id="pageeditor" name="pageContent"><# pageContent #></textarea>
     </div>
 </form>
-<# INCLUDE dropinDiv #>
-<# INCLUDE mediaDiv #>
 

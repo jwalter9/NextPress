@@ -234,13 +234,13 @@ function saveCategories(){
 $(document).ready(function() {
 	
 	tinymce.init({
-		selector: "textarea#editor",
+		selector: "textarea#pageeditor",
 		file_picker_types: 'file image',
 		file_picker_callback: function(cb, value, meta) {
 		    var input = document.createElement('input');
 		    input.setAttribute('type', 'file');
 		    input.onchange = function() {
-		        var file = this.files[];
+		        var file = this.files[0];
 		        var id = 'blobid' + (new Date()).getTime();
 		        var blobCache = tinymce.activeEditor.editorUpload.blobCache;
 		        var blobInfo = blobCache.create(id, file);
@@ -261,23 +261,93 @@ $(document).ready(function() {
             });
 		},
 		theme: "modern",
+		setup: function (editor) {
+		    editor.addButton('browsemedia', {
+		            text: 'Browse Media',
+		            icon: false,
+		            onclick: function () {
+		                window.open('/Media','_blank');
+		            }
+		    });
+		},
+		setup: function (editor) {
+		    editor.addButton('dropins', {
+		            text: 'Browse Drop-Ins',
+		            icon: false,
+		            onclick: function () {
+		                window.open('/Dropins','_blank');
+		            }
+		    });
+		},
 		plugins: [
 	        	"advlist autolink lists link image charmap print preview hr anchor pagebreak",
 	        	"searchreplace wordcount visualblocks visualchars code fullscreen",
 	        	"insertdatetime media nonbreaking save table contextmenu directionality",
 	        	"emoticons template paste textcolor colorpicker textpattern imagetools"
 	        ],
-	        toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link media",
+	        toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link media | browsemedia | dropins",
 	        content_css: "/css/admin.css",
 	        width: $(document).width,
 	        height: 700
         });
     
-    $(".dd-handle").click( function(){ 
-            alert("wtf?");
-            catLiBeingEdited = $(this).parent();
-            $('#dispName').value = $(this).innerHTML;
-            $('#uri').value = $(this).parent().attr("data-uri");
+	
+	tinymce.init({
+		selector: "textarea#articleeditor",
+		file_picker_types: 'file image',
+		file_picker_callback: function(cb, value, meta) {
+		    var input = document.createElement('input');
+		    input.setAttribute('type', 'file');
+		    input.onchange = function() {
+		        var file = this.files[0];
+		        var id = 'blobid' + (new Date()).getTime();
+		        var blobCache = tinymce.activeEditor.editorUpload.blobCache;
+		        var blobInfo = blobCache.create(id, file);
+		        blobCache.add(blobInfo);
+		        cb(blobInfo.blobUri(), { title: file.name });
+		    };
+		    input.click();
+		},
+		images_upload_handler: function (blobInfo, success, failure) {
+		    $.ajax({
+                url: "/addMedia",
+                data: { upload: blobInfo.blob(), fname: blobInfo.filename() },
+                dataType: "json",
+                cache: false
+            }).done(function( data ) {
+                if( data.PROC_OUT[0].err != '' ) failure(data.PROC_OUT[0].err);
+                else success(data.media[0].uri);
+            });
+		},
+		theme: "modern",
+		setup: function (editor) {
+		    editor.addButton('browsemedia', {
+		            text: 'Browse Media',
+		            icon: false,
+		            onclick: function () {
+		                window.open('/Media','_blank');
+		            }
+		    });
+		},
+		setup: function (editor) {
+		    editor.addButton('tags', {
+		            text: 'Article Tags',
+		            icon: false,
+		            onclick: function () {
+		                window.open('/ArticleTags','_blank');
+		            }
+		    });
+		},
+		plugins: [
+	        	"advlist autolink lists link image charmap print preview hr anchor pagebreak",
+	        	"searchreplace wordcount visualblocks visualchars code fullscreen",
+	        	"insertdatetime media nonbreaking save table contextmenu directionality",
+	        	"emoticons template paste textcolor colorpicker textpattern imagetools"
+	        ],
+	        toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link media | browsemedia | tags",
+	        content_css: "/css/admin.css",
+	        width: $(document).width,
+	        height: 700
         });
 });
 

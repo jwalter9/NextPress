@@ -3,18 +3,16 @@
 
 <table id="artlist">
 <# IF articles.NUM_ROWS > 0 #>
-    <tr class="artlist-head"><th>Author</th><th>Title</th><th>Published</th><th></th></tr>
+    <tr class="artlist-head"><th>Title</th><th>Published</th><th></th></tr>
     <# LOOP articles #><tr>
-        <td><# IF avatarUri #><img src="/avatarUri" /><br /><# ENDIF #>
-            <span class="artlist-author"><# displayName #></td>
         <td><span class="artlist-title"><# title #></span><br />
             <span class="artlist-teaser"><# teaser #></span></td>
-        <td><span class="artlist-pubdate"><# pubDate #></span><br />
+        <td><span class="artlist-pubdate"><# pubDate #></span><# IF PROC_OUT.canPublish = 'Y' #><br />
             <# IF pubDate = 'Unpublished' #>
             <input id="pub<# id #>" type="button" value="Publish" onclick="publish_article(<# id #>);" />
             <# ELSE #>
             <input id="pub<# id #>" type="button" value="Unpublish" onclick="unpublish_article(<# id #>);" />
-            <# ENDIF #></td>
+            <# ENDIF #><# ENDIF #></td>
         <td><a href="/ArticlePreview?articleId=<# id #>" target="_blank">view</a><br />
             <a href="/ArticleEditor?articleId=<# id #>" target="_blank">edit</a></td>
     </tr><# SET oldest = id #><# ENDLOOP #>
@@ -23,7 +21,7 @@
         <td colspan="4"><a href="#" onclick="moreArticles(<# @.oldest #>);">More...</a></td>
     </tr><# ENDIF #>
 <# ELSE #>
-    <tr><td></td></tr><tr><td>There are no articles yet.</td></tr>
+    <tr><td></td></tr><tr><td>You have written no articles yet.</td></tr>
 <# ENDIF #>
 </table>
 

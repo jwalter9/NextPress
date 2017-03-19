@@ -483,7 +483,7 @@ BEGIN
     DECLARE curi, cname, indent VARCHAR(1024) DEFAULT '';
     DECLARE listHtml TEXT DEFAULT '<select name="catId"><option>Select a Category</option>';
     DECLARE queue TEXT DEFAULT '1|';
-    DECLARE cursr CURSOR FOR SELECT `id`, `idParent`, `uri`, `displayName`, `pages`.`published`
+    DECLARE cursr CURSOR FOR SELECT `id`, `idParent`, `categories`.`uri`, `displayName`, `pages`.`published`
         FROM `categories` LEFT JOIN `pages` ON `categories`.`uri` = `pages`.`uri`
         WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
@@ -511,13 +511,13 @@ BEGIN
                 END IF;
             END IF;
             IF pub IS NULL OR pub = 0 THEN
-                IF pid != catSelected THEN
-                    SET listHtml = CONCAT(listHtml,'<option value="',cid,
-                                          '">',indent,REPLACE(cname,'"',''),'</option>');
-                ELSE
+                IF cid = catSelected THEN
                     SET listHtml = CONCAT(listHtml,'<option value="',cid,
                                           '" selected="selected">',
                                           indent,REPLACE(cname,'"',''),'</option>');
+                ELSE
+                    SET listHtml = CONCAT(listHtml,'<option value="',cid,
+                                          '">',indent,REPLACE(cname,'"',''),'</option>');
                 END IF;
             END IF;
             SET prevCatId = cid;

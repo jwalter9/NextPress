@@ -1,10 +1,9 @@
 
-<span class="notice">Files here can be copied and pasted into the PageEditor or ArticleEditor</span>
+<span class="notice">Drop-ins can be copied and pasted into the PageEditor</span>
 <br />
 <table>
-    <# IF media.NUM_ROWS < 1 #><tr><td></td></tr><tr><td>There are no files uploaded.</td></tr>
-        <tr><td>Upload files using the Page or Article editor.</td></tr><# ELSE #>
-    <# LOOP media #><tr>
+    <# IF dropins.NUM_ROWS < 1 #><tr><td></td></tr><tr><td>There are no dropins enabled.</td></tr><# ELSE #>
+    <# LOOP dropins #><tr>
         <td><a href="<# uri #>" target="_blank"><img src="<# thumb #>" /><br /><# uri #></a></td>
         <td>Added by <a href="/Users?srch=<# email #>" target="_blank"><# displayName #></a><br />
             <a href="mailto:<# email #>"><# email #></a><br /><# addedDate #></td>
