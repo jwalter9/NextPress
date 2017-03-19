@@ -205,7 +205,7 @@ BEGIN
     ELSE
         SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author');
         IF userId > 0 THEN
-            SELECT `media`.*, `nextData`.`published`(`dtAdded`) AS addedDate, 
+            SELECT `media`.*, `nextData`.`published`(`dtAdded`) AS addedDate
                 FROM `nextData`.`media` WHERE `idAuthor` = userId
                 ORDER BY `dtAdded` DESC;
             CALL `adminMenu`();
