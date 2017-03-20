@@ -4,11 +4,11 @@
             <li class="editor-entry">
                 &nbsp;
             </li>
-        <# IF pages.content #>
+        <# IF pageContent #>
             <li id="unpubit" class="editor-entry"<# IF pagePub = 0 #> style="display:none;"<# ENDIF #>>
-                <a href="#" onclick="unpublish_page('<# pageUri #>', '<# pageMobile #>');">Un-publish</a></li>
+                <input type="button" onclick="unpublish_page('<# pageUri #>', '<# pageMobile #>');" value="Un-publish"/></li>
             <li id="pubit" class="editor-entry"<# IF pagePub = 1 #> style="display:none;"<# ENDIF #>>
-                <a href="#" onclick="publish_page('<# pageUri #>', '<# pageMobile #>');">Publish</a></li>
+                <input type="button" onclick="publish_page('<# pageUri #>', '<# pageMobile #>');" value="Publish"/></li>
         <# ENDIF #>
             <li class="editor-entry">
                 <input type="submit" value="Save" />

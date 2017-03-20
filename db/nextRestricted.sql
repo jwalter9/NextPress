@@ -233,6 +233,31 @@ BEGIN
     RETURN 'Page successfully unpublished.';
 END $$
 
+DROP FUNCTION IF EXISTS `findActiveDropins` $$
+CREATE FUNCTION `findActiveDropins`() RETURNS TINYINT
+MODIFIES SQL DATA
+BEGIN
+    DECLARE pagecontent TEXT;
+    DECLARE done INT DEFAULT 0;
+    DECLARE cursr CURSOR FOR SELECT `content` FROM `pages` WHERE `published` = 1;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    UPDATE `dropins` SET `active` = 0;
+    OPEN cursr;
+    REPEAT
+        FETCH cursr INTO pagecontent;
+        IF NOT done THEN
+            WHILE LOCATE('/media/dropins/', pagecontent) > 0 DO
+                SET pagecontent = 
+                    SUBSTR(pagecontent, LOCATE('/media/dropins/', pagecontent) + 15);
+                UPDATE `dropins` SET `active` = 1
+                    WHERE `img` = TRIM(SUBSTR(pagecontent, 1, LOCATE('"', pagecontent) - 1));
+            END WHILE;
+        END IF;
+    UNTIL done END REPEAT;
+    CLOSE cursr;
+    RETURN 1;
+END $$
+
 DROP FUNCTION IF EXISTS `descript` $$
 CREATE FUNCTION `descript`(fromWeb TEXT) RETURNS TEXT
 NO SQL
@@ -335,7 +360,7 @@ BEGIN
         WHERE `id` = articleId AND `dtPublish` IS NOT NULL LIMIT 1;
     IF @ptitle IS NOT NULL AND @ptitle != '' AND isBot(@mvp_headers) = 0 THEN
         UPDATE `articles` SET `numViews` = `numViews` + 1 
-            WHERE `id` = articleid;
+            WHERE `id` = articleId;
     END IF;
     SELECT `tags`.* FROM `nextData`.`tags` 
         JOIN `nextData`.`article_tags` ON `tags`.`id` = `article_tags`.`idTag`

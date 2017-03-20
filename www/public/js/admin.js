@@ -169,7 +169,7 @@ function publish_page(uri, mobile){
     });
 }
 
-function unpublish_page(id){
+function unpublish_page(uri, mobile){
     $.ajax({
         url: "/publishPage",
         data: { pageUri: uri, pageMobile: mobile, invRev: 0 },
@@ -187,7 +187,7 @@ function unpublish_page(id){
 
 $(document).ready(function()
 {
-    $('#nestable').nestable();
+    $('#nestable').nestable({ maxDepth: 3 });
 });
 
 var newCatIter = 0;

@@ -148,8 +148,11 @@ BEGIN
             IF pageTpl IS NULL OR pageTpl = '' THEN
                 SET pageTpl = `nextData`.`urize`(REPLACE(pageUri,'/',''));
             END IF;
-            REPLACE INTO `pages` (`uri`,`tpl`,`mobile`,`content`)
-                VALUES (`urize`(pageUri), pageTpl, pageMobile, pageContent);
+            IF pageMobile IS NULL THEN
+                SET pageMobile = 0;
+            END IF;
+            REPLACE INTO `nextData`.`pages` (`uri`,`tpl`,`mobile`,`content`)
+                VALUES (`nextData`.`urize`(pageUri), pageTpl, pageMobile, pageContent);
         END IF;
         SELECT `uri`,`tpl`,`mobile`,`published`,`content`
             INTO pageUri, pageTpl, pageMobile, pagePub, pageContent
@@ -180,6 +183,7 @@ BEGIN
         ELSE
             SET @err = `nextData`.`removePage`(pageTpl,pageMobile);
         END IF;
+        SET chk = `nextData`.`findActiveDropins`();
     ELSE
         SET @err = 'Please log in with Admin privileges';
     END IF;
