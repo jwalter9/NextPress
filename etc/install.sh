@@ -115,6 +115,9 @@ else
 	echo "NextPress web templates successfully installed"
 fi
 
+chown -R mysql /var/www
+chmod -R a+rX /var/www
+
 cd ../etc
 cp next.cnf /etc/mysql/conf.d/
 if test $? -ne 0; then
@@ -146,5 +149,12 @@ if test $? -ne 0; then
 else
 	echo "NextPress Admin Site Config should be reviewed/edited before activation:"
 	echo "  /etc/apache2/sites-available/nextAdmin.conf"
+fi
+
+
+echo "Adding apparmor permissions (if apparmor is installed)"
+if test -f "/etc/apparmor.d/local/usr.sbin.mysqld"; then
+    cat nextapparmor >> /etc/apparmor.d/local/usr.sbin.mysqld
+    /sbin/apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
 fi
 

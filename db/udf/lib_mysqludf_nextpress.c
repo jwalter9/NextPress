@@ -236,6 +236,8 @@ my_ulonglong file_write(
 ,    char *is_null
 ,    char *error
 ){
+    char *cmd = malloc(11+args->lengths[0]);
+    if(!cmd) return 127;
     FILE *f = fopen(args->args[0], "w");
     if(!f){
         strcpy(error,"Cannot open file for write");
@@ -248,6 +250,8 @@ my_ulonglong file_write(
         sprintf(error, "Wrote %lu of %lu bytes", writ, args->lengths[1]);
         return 2;
     };
+    sprintf(cmd, "chmod 644 %s", args->args[0]);
+    c = system(cmd);
     return c;
 }
 

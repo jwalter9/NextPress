@@ -1,0 +1,5 @@
+#related-list li { padding: 5px 0px 5px 10px; border-bottom: 1px solid #999999; height: 100px; width: 880px; }
+#related-list li img { float: left; padding-right: 10px; max-height: 90px; max-width: 120px; }
+#related-list li a { text-decoration: none; font-size: 12px; font-weight: bold; }
+#related-list li p { font-size: 11px; }
+

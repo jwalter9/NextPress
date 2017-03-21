@@ -190,8 +190,6 @@ $(document).ready(function()
     $('#nestable').nestable({ maxDepth: 3 });
 });
 
-var newCatIter = 0;
-
 function newCategory(){
     var newCatIter = document.getElementById('newCatIter').value;
     newCatIter++;
@@ -270,8 +268,6 @@ $(document).ready(function() {
 		                window.open('/Media','_blank');
 		            }
 		    });
-		},
-		setup: function (editor) {
 		    editor.addButton('dropins', {
 		            text: 'Browse Drop-Ins',
 		            icon: false,
@@ -329,13 +325,12 @@ $(document).ready(function() {
 		                window.open('/Media','_blank');
 		            }
 		    });
-		},
-		setup: function (editor) {
+		    var aid = document.getElementById('articleId').value;
 		    editor.addButton('tags', {
 		            text: 'Article Tags',
 		            icon: false,
 		            onclick: function () {
-		                window.open('/ArticleTags','_blank');
+		                window.open('/ArticleTags?articleId='+aid,'_blank');
 		            }
 		    });
 		},

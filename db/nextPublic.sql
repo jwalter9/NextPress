@@ -109,7 +109,71 @@ END $$
 
 -- Procedures for DropIns
 
+DROP PROCEDURE IF EXISTS `Archives` $$
+CREATE PROCEDURE `Archives`(OUT htmlArchive TEXT)
+BEGIN
+    DECLARE artId, yr, curYr, done BIGINT DEFAULT 0;
+    DECLARE mnth, curMnth VARCHAR(10) DEFAULT '';
+    DECLARE ttl VARCHAR(256);
+    DECLARE uri VARCHAR(1024);
+    DECLARE cursr CURSOR FOR SELECT `id`, `uri`, `title`, 
+            YEAR(`dtPublish`), MONTHNAME(`dtPublish`) 
+        FROM `nextData`.`articles`
+        WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET htmlArchive = '<ul>\n';
+    OPEN cursr;
+    REPEAT
+        FETCH cursr INTO artId, uri, ttl, yr, mnth;
+        IF NOT done THEN
+            IF curYr != yr THEN
+                SET htmlArchive = CONCAT(htmlArchive, 
+                    '<li class="arch-year">', yr, '</li>\n');
+                SET curYr = yr;
+                SET curMnth = '';
+            END IF;
+            IF curMnth != mnth THEN
+                SET htmlArchive = CONCAT(htmlArchive, 
+                    '<li class="arch-month">', mnth, '</li>\n');
+                SET curMnth = mnth;
+            END IF;
+            SET htmlArchive = CONCAT(htmlArchive, 
+                '<li class="arch-article"><a href="/',uri,'">',ttl,'</a></li>\n');
+        END IF;
+    UNTIL done END REPEAT;
+    CLOSE cursr;
+    SET htmlArchive = CONCAT(htmlArchive, '</ul>');
+END $$
 
+DROP PROCEDURE IF EXISTS `Disqus` $$
+CREATE PROCEDURE `Disqus`(OUT shortname TEXT)
+BEGIN
+    SET shortname = `nextData`.`getConfig`('Disqus','disqusId');
+END $$
+
+DROP PROCEDURE IF EXISTS `MainMenu` $$
+CREATE PROCEDURE `MainMenu`(OUT htmlMenu TEXT)
+BEGIN
+    SET htmlMenu = `nextData`.`publicCategories`();
+END $$
+
+DROP PROCEDURE IF EXISTS `RelatedArticles` $$
+CREATE PROCEDURE `RelatedArticles`(IN articleId BIGINT)
+BEGIN
+    DECLARE chkPub INT DEFAULT 0;
+    SELECT COUNT(`id`) INTO chkPub FROM `nextData`.`articles`
+        WHERE `id` = articleId AND `dtPublish` IS NOT NULL;
+    IF chk > 0 THEN
+        SELECT `articles`.`id`, `teaser`, `title`, `articles`.`uri`,
+            published(`dtPublish`) AS pubDate, `media`.`uri` AS picUri
+        FROM `nextData`.`articles` AS related
+        JOIN `nextData`.`article_tags` ON `articles`.`id` = `article_tags`.`idArticle`
+            AND `article_tags`.`idTag` IN
+            ( SELECT `idTag` FROM `nextData`.`article_tags` WHERE `idArticle` = articleId )
+        LEFT JOIN `media` ON `articles`.`idTeasePic` = `media`.`id`
+        WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
+    END IF;
+END $$
 
 DELIMITER ;
 

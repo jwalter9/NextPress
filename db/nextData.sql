@@ -106,7 +106,7 @@ CREATE TABLE `articles` (
   `idAuthor` bigint(20) NOT NULL,
   `idwp` bigint(20) DEFAULT NULL,
   `idCategory` bigint(20) DEFAULT NULL,
-  `idTeasePic` bigint(20) DEFAULT NULL,
+  `teasePic` varchar(1024) DEFAULT NULL,
   `content` text,
   `teaser` varchar(256) DEFAULT NULL,
   `title` varchar(256) DEFAULT NULL,
@@ -116,9 +116,7 @@ CREATE TABLE `articles` (
   `numViews` bigint(20) unsigned DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `fk_article_author` (`idAuthor`),
-  KEY `fk_article_tpic` (`idTeasePic`),
-  CONSTRAINT `fk_article_author` FOREIGN KEY (`idAuthor`) REFERENCES `users` (`id`),
-  CONSTRAINT `fk_article_tpic` FOREIGN KEY (`idTeasePic`) REFERENCES `media` (`id`)
+  CONSTRAINT `fk_article_author` FOREIGN KEY (`idAuthor`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

@@ -1,0 +1,5 @@
+
+  /tmp/** r,
+  /var/www/** rw,
+  /usr/bin/sudo ix,
+

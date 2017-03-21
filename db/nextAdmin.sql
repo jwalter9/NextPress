@@ -579,6 +579,7 @@ BEGIN
                 UPDATE `nextData`.`articles` SET
                     `content` = `nextData`.`descript`(contentin),
                     `teaser` = `nextData`.`tease`(contentin),
+                    `teasePic` = `nextData`.`getTeasePic`(contentin),
                     `title` = `nextData`.`descript`(titlein),
                     `uri` = `nextData`.`urize`(uriin),
                     `idCategory` = catId
@@ -607,6 +608,7 @@ BEGIN
                     UPDATE `nextData`.`articles` SET
                         `content` = `nextData`.`descript`(contentin),
                         `teaser` = `nextData`.`tease`(contentin),
+                        `teasePic` = `nextData`.`getTeasePic`(contentin),
                         `title` = `nextData`.`descript`(titlein),
                         `uri` = `nextData`.`urize`(uriin),
                         `idCategory` = catId
@@ -910,7 +912,6 @@ BEGIN
                 SET @err = 'Unrecognized Login Credentials... ';
             END IF;
         END IF;
-        -- And just in case the Admin has created a role that can't comment
         -- checkSession is done outside of Login
         SET schk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Commenter');
     
@@ -923,7 +924,8 @@ BEGIN
                     SELECT COUNT(`id`) INTO appr FROM `nextData`.`comments` WHERE `idCommenter` = schk AND `approved` > 0;
                 END IF;
             END IF;
-            SELECT CONCAT(@err, 'Posted as ', `displayName`) FROM `nextData`.`users` WHERE `id` = schk LIMIT 1;
+            SELECT CONCAT(@err, 'Posted as ', `displayName`) INTO @err
+                FROM `nextData`.`users` WHERE `id` = schk LIMIT 1;
 
             -- Set parent id and top level id
             IF replyId IS NOT NULL AND replyId > 0 AND TRIM(LOWER(`nextData`.`getConfig`('Comments','threaded'))) = 'yes' THEN

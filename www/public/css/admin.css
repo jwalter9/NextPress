@@ -12,15 +12,20 @@ tr:nth-child(even) { background-color: #EEEEEE; }
 #mainMenuList { display: none; position: absolute; min-width: 260px; z-index: 1; top: 32px; }
 #dropList li { float: none; background: #444444; padding: 5px; padding-top: 10px; }
 #dropList li a { text-decoration: none; color: #EEEEEE; }
-#pageDiv { margin: 50px auto; }
+#pageDiv { margin: 50px auto; min-height: 100%; }
 #page-name { font: 24px bold; margin-top: 5px; }
 #cat-edit { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: fixed; top: 60px; right: 0px; }
 #new-tag { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: fixed; top: 60px; right: 0px; }
 #nestable { margin: auto; padding-top: 50px; }
+#footer { position: fixed; bottom: 0; width: 100%; font-size: 12px; font-weight: bold; color: #333333; padding-bottom: 5px; }
+#footer li { float: right; padding: 5px 10px 5px 10px; background-color: #EEEEEE; }
+#footer a { text-decoration: none; color: #333333; }
 li.editor-entry { float: right; font-size: 12px; }
 li.spacer { height: 12px; width: 20px; }
 li.horiz { float: left; }
-li.tiles { float: left; padding: 25px; font-weight: bold; text-decoration: none; text-align: center; }
+li.tiles { float: left; padding: 25px; font-weight: bold; text-align: center; height: 200px; width: 200px; }
+li.tiles img { max-height: 200px; max-width: 180px; }
+li.tiles a { text-decoration: none; color: #333333; }
 div.spacer { height: 40px; }
 div.config-section { margin-top: 40px; }
 div.form-div { background: #EEEEEE; padding: 20px; margin: 40px; float: left; }
@@ -30,6 +35,8 @@ span.err { margin-left: 40px; font-weight: bold; font-size: 20px; color: #AA4444
 span.notice { padding-left: 40px; font-size: 12px; }
 a.button { color: black; background: #EEEEEE; font-size: 14px; font-weight:bold; text-decoration: none; margin-top: 0px; margin-left: 5px; padding: 10px; float: left; border: 1px solid black; }
 
+/* the following is for the graphical category editor using D. Bushell's "Nestable"
+    https://dbushell.com/Nestable/ */
 .dd { position: relative; display: block; margin: 0; padding: 0; max-width: 600px; list-style: none; font-size: 13px; line-height: 20px; }
 
 .dd-list { display: block; position: relative; margin: 0; padding: 0; list-style: none; }

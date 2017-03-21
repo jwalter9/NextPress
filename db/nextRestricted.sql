@@ -308,6 +308,31 @@ BEGIN
     RETURN CONCAT(SUBSTR(outStr, 1, 250),'...');
 END $$
 
+DROP FUNCTION IF EXISTS `getTeasePic` $$
+CREATE FUNCTION `getTeasePic`(htmlContent TEXT) RETURNS TEXT
+READS SQL DATA
+BEGIN
+    DECLARE pos, len INT DEFAULT 0;
+    DECLARE imid BIGINT DEFAULT 0;
+    DECLARE imgSrc TEXT DEFAULT '';
+    SET pos = LOCATE('<img', LOWER(htmlContent));
+    IF pos > 0 THEN
+        SET imgSrc = SUBSTR(htmlContent, pos);
+        SET pos = LOCATE('src="', LOWER(imgSrc));
+        IF pos > 0 THEN
+            SET imgSrc = SUBSTR(imgSrc, pos + 5);
+            SET imgSrc = SUBSTR(imgSrc, 1, LOCATE('"', imgSrc) - 1);
+            SELECT `id` INTO imid FROM `media` WHERE `uri` = imgSrc LIMIT 1;
+            IF imid > 0 THEN
+                SELECT `thumb` INTO imgSrc FROM `media` WHERE `id` = imid;
+            END IF;
+        ELSE
+            SET imgSrc = '';
+        END IF;
+    END IF;
+    RETURN imgSrc;
+END $$
+
 DROP FUNCTION IF EXISTS `published` $$
 CREATE FUNCTION `published`(indate DATE) RETURNS VARCHAR(32)
 READS SQL DATA
@@ -392,12 +417,11 @@ BEGIN
         CALL `nextArticle`(articleId);
     ELSE
         SELECT `articles`.`id`, `teaser`, `title`, `articles`.`uri`,
-            published(`dtPublish`) AS pubDate,`media`.`uri` AS picUri, 
+            published(`dtPublish`) AS pubDate, `teasePic`, 
             `article_categories`.`idCategory`
             FROM `articles` 
             JOIN `article_categories` ON `articles`.`id` = `article_categories`.`idArticle`
                 AND `article_categories`.`idCategory` = categoryId
-            LEFT JOIN `media` ON `articles`.`idTeasePic` = `media`.`id` 
             WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
             
         IF @mobile != 'Y' THEN
@@ -432,11 +456,10 @@ BEGIN
         CALL `nextArticle`(articleId);
     ELSE
         SELECT `articles`.`id`, `teaser`, `title`, `articles`.`uri`,
-            published(`dtPublish`) AS pubDate, `media`.`uri` AS picUri
+            published(`dtPublish`) AS pubDate, `teasePic`
             FROM `articles` 
             JOIN `article_tags` ON `articles`.`id` = `article_tags`.`idArticle` 
                 AND `article_tags`.`idTag` = tagId 
-            LEFT JOIN `media` ON `articles`.`idTeasePic` = `media`.`id`
             WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
         SELECT CONCAT(@ptitle, ' - ', `displayName`) INTO @ptitle 
             FROM `tags` WHERE `id` = tagId LIMIT 1;
