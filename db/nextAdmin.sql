@@ -883,12 +883,13 @@ BEGIN
     END IF;
 END $$
 
--- This one is "admin" because it checks the https session cookie
+-- Comments are "admin" because they check the https session cookie
 DROP PROCEDURE IF EXISTS `getComments` $$
 CREATE PROCEDURE `getComments` (IN articleId INT, IN top BIGINT, OUT total INT, OUT earliest VARCHAR(32),
                                 OUT loggedIn INT, OUT cmntrName VARCHAR(1024), OUT cmntrAvatar VARCHAR(1024),
                                 OUT moderator INT, OUT showAvatars INT)
 BEGIN
+
 END $$
 
 DROP PROCEDURE IF EXISTS `SubmitComment` $$

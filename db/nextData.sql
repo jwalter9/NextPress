@@ -332,6 +332,7 @@ CREATE TABLE `dropins` (
 
 LOCK TABLES `dropins` WRITE;
 /*!40000 ALTER TABLE `dropins` DISABLE KEYS */;
+INSERT INTO `dropins` VALUES ('Archives','Archives','Archives.png','archives.css',NULL,0),('Article Content','ArticleContent','ArticleContent.png','article-content.css',NULL,0),('Article List','ArticleList','ArticleList.png','article-list.css',NULL,0),('Disqus Comments','DisqusComments','DisqusComments.png','disqus-comments.css',NULL,0),('Main Menu','MainMenu','MainMenu.png','main-menu.css',NULL,0),('Related Articles','RelatedArticles','RelatedArticles.png','related-articles.css',NULL,0),('Self-Hosted Comments','NextComments','NextComments.png','next-comments.css','next-comments.js',0);
 /*!40000 ALTER TABLE `dropins` ENABLE KEYS */;
 UNLOCK TABLES;
 
