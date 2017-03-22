@@ -146,7 +146,7 @@ CREATE FUNCTION `publishPage`(pageUri VARCHAR(512), pageMobile TINYINT)
     RETURNS VARCHAR(64)
 MODIFIES SQL DATA
 BEGIN
-    DECLARE tplResult, piece, pageContent TEXT;
+    DECLARE tplResult, piece, pageContent TEXT DEFAULT '';
     DECLARE pos, pos2, len, piecePos, pieceEnd INT DEFAULT 1;
     DECLARE dropinImg, dropinTpl, pageTpl VARCHAR(1024) DEFAULT '';
     SELECT `content`, `tpl` INTO pageContent, pageTpl FROM `pages`
@@ -218,13 +218,11 @@ BEGIN
     SELECT `tpl` INTO pageTpl FROM `pages` 
         WHERE `uri` = pageUri AND `mobile` = pageMobile LIMIT 1;
     SET errno = file_delete(CONCAT(`getConfig`('Site','tplroot'),
-                            '/pages/',pageTpl,'.tpl'));
+                            '/public/pages/',pageTpl,'.tpl'));
     
-    IF errno = 0 THEN
-        RETURN 'Page successfully unpublished';
+    IF errno != 0 THEN
+        RETURN CONCAT('Error deleting template (',errno,')');
     END IF;
-    
-    RETURN CONCAT('Error deleting template (',errno,')');
 
     SET errno = reload_apache();
     IF errno != 0 THEN

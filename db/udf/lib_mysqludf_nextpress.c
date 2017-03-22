@@ -25,7 +25,7 @@ typedef long long longlong;
 #include <m_string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
+#include <sys/stat.h>
 #include <libesmtp.h>
 
 #ifdef HAVE_DLOPEN
@@ -83,8 +83,8 @@ my_ulonglong convert_img(
     strncpy(src, args->args[0], args->lengths[0]);
     strncpy(dst, args->args[1], args->lengths[1]);
     strncpy(res, args->args[2], args->lengths[2]);
-    char *cmd = malloc(34+args->lengths[0]+args->lengths[2]+args->lengths[1]*2);
-    sprintf(cmd,"/usr/bin/convert %s %s %s && chmod 644 %s",src,res,dst,dst);
+    char *cmd = malloc(39+args->lengths[0]+args->lengths[2]+args->lengths[1]*2);
+    sprintf(cmd,"/usr/bin/convert %s %s %s && /bin/chmod 644 %s",src,res,dst,dst);
     retVal = system(cmd);
     free(src);
     free(dst);
@@ -236,8 +236,6 @@ my_ulonglong file_write(
 ,    char *is_null
 ,    char *error
 ){
-    char *cmd = malloc(11+args->lengths[0]);
-    if(!cmd) return 127;
     FILE *f = fopen(args->args[0], "w");
     if(!f){
         strcpy(error,"Cannot open file for write");
@@ -250,8 +248,7 @@ my_ulonglong file_write(
         sprintf(error, "Wrote %lu of %lu bytes", writ, args->lengths[1]);
         return 2;
     };
-    sprintf(cmd, "chmod 644 %s", args->args[0]);
-    c = system(cmd);
+    c = chmod(args->args[0], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     return c;
 }
 
@@ -291,11 +288,11 @@ my_ulonglong file_copy(
     if(!src) return 127;
     char *dst = calloc(args->lengths[1] + 1, sizeof(char));
     if(!dst) return 127;
-    char *cmd = malloc(20+args->lengths[0]+args->lengths[1]*2);
+    char *cmd = malloc(30+args->lengths[0]+args->lengths[1]*2);
     if(!cmd) return 127;
     strncpy(src, args->args[0], args->lengths[0]);
     strncpy(dst, args->args[1], args->lengths[1]);
-    sprintf(cmd, "cp %s %s && chmod 644 %s", src, dst, dst);
+    sprintf(cmd, "/bin/cp %s %s && /bin/chmod 644 %s", src, dst, dst);
     retVal = system(cmd);
     free(src);
     free(dst);
@@ -337,13 +334,9 @@ my_ulonglong file_delete(
     my_ulonglong retVal;
     char *del = calloc(args->lengths[0] + 1, sizeof(char));
     if(!del) return 127;
-    char *cmd = malloc(4 + args->lengths[0]);
-    if(!cmd) return 127;
     strncpy(del, args->args[0], args->lengths[0]);
-    sprintf(cmd, "rm %s", del);
-    retVal = system(cmd);
+    retVal = remove(del);
     free(del);
-    free(cmd);
     return retVal;
 }
 
@@ -376,7 +369,7 @@ my_ulonglong reload_apache(
     ,    char *is_null
     ,    char *error
 ){
-    return system("sudo /etc/nextpress/reload_apache.sh");
+    return system("/usr/bin/sudo /etc/init.d/apache2 reload");
 }
 
 

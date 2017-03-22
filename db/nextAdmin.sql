@@ -172,16 +172,18 @@ DROP PROCEDURE IF EXISTS `publishPage` $$
 CREATE PROCEDURE `publishPage` (IN pageUri VARCHAR(512), IN pageMobile TINYINT,
                                 IN invRev TINYINT)
 BEGIN
-    DECLARE userId, chk, notificationsSent BIGINT DEFAULT 0;
+    DECLARE userId, chk BIGINT DEFAULT 0;
     DECLARE pubDate DATETIME DEFAULT NULL;
-    SET notificationsSent = 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
+    IF pageUri IS NULL THEN
+        SET pageUri = '';
+    END IF;
     
     IF userId > 0 THEN
         IF invRev = 1 THEN
             SET @err = `nextData`.`publishPage`(pageUri,pageMobile);
         ELSE
-            SET @err = `nextData`.`removePage`(pageTpl,pageMobile);
+            SET @err = `nextData`.`removePage`(pageUri,pageMobile);
         END IF;
         SET chk = `nextData`.`findActiveDropins`();
     ELSE

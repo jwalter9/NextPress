@@ -100,23 +100,24 @@ else
 	echo "NextPress Administrator data successfully updated"
 fi
 
+mkdir /var/nextpress
 cd ../www
-cp -R public /var/www/
+cp -R public /var/nextpress/
 if test $? -ne 0; then
 	echo "ERROR: unable to copy www/public to /var/www"
 else
 	echo "NextPress web root successfully installed"
 fi
 
-cp -R templates /var/www/
+cp -R templates /var/nextpress/
 if test $? -ne 0; then
 	echo "ERROR: unable to copy www/templates to /var/www"
 else
 	echo "NextPress web templates successfully installed"
 fi
 
-chown -R mysql /var/www
-chmod -R a+rX /var/www
+chown -R mysql /var/nextpress
+chmod -R a+rX /var/nextpress
 
 cd ../etc
 cp next.cnf /etc/mysql/conf.d/
@@ -152,9 +153,13 @@ else
 fi
 
 
-echo "Adding apparmor permissions (if apparmor is installed)"
 if test -f "/etc/apparmor.d/local/usr.sbin.mysqld"; then
+    echo "Adding apparmor permissions"
     cat nextapparmor >> /etc/apparmor.d/local/usr.sbin.mysqld
     /sbin/apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
+else
+    echo "If SELinux is installed (and not turned off),"
+    echo "make sure to use audit2allow to create a profile,"
+    echo "then install the new policy for mysqld."
 fi
 

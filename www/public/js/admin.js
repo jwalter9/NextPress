@@ -160,11 +160,12 @@ function publish_page(uri, mobile){
         dataType: "json",
         cache: false
     }).done(function( data ) {
-        if( data.PROC_OUT[0].err != '' ){
+        if(typeof data.PROC_OUT[0].err != 'undefined'){
             alert(data.PROC_OUT[0].err);
         }else{
-            $( "#pubit" ).hide();
-            $( "#unpubit" ).show();
+            alert('Page successfully published');
+            document.getElementById('pubit').style = 'display: none;';
+            document.getElementById('unpubit').style = 'display: block;';
         };
     });
 }
@@ -176,11 +177,12 @@ function unpublish_page(uri, mobile){
         dataType: "json",
         cache: false
     }).done(function( data ) {
-        if( data.PROC_OUT[0].err != '' ){
+        if(typeof data.PROC_OUT[0].err != 'undefined'){
             alert(data.PROC_OUT[0].err);
         }else{
-            $( "#unpubit" ).hide();
-            $( "#pubit" ).show();
+            alert('Page successfully un-published');
+            document.getElementById('unpubit').style = 'display: none;';
+            document.getElementById('pubit').style = 'display: block;';
         };
     });
 }

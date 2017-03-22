@@ -1,5 +1,8 @@
 
   /tmp/** r,
-  /var/www/** rw,
-  /usr/bin/sudo ix,
+  /var/nextpress/** rw,
+  /bin/chmod ixr,
+  /bin/cp ixr,
+  /usr/bin/convert ixr,
+  /usr/bin/sudo ixr,
 
