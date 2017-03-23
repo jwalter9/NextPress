@@ -1,3 +1,9 @@
+-- 
+--  NextPress Database & User setup
+--  Copyright (C) 2017 Lowadobe Web Services, LLC 
+--  web: http://nextpress.org/
+--  email: lowadobe@gmail.com
+--
 
 CREATE DATABASE IF NOT EXISTS `nextData`;
 CREATE DATABASE IF NOT EXISTS `nextPublic`;

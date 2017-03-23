@@ -1,6 +1,6 @@
 -- 
 --  NextPress Public (non-SSL) Procedures
---  Copyright (C) 2016 Lowadobe Web Services, LLC 
+--  Copyright (C) 2017 Lowadobe Web Services, LLC 
 --  web: http://nextpress.org/
 --  email: lowadobe@gmail.com
 --
@@ -163,7 +163,7 @@ BEGIN
     DECLARE chkPub INT DEFAULT 0;
     SELECT COUNT(`id`) INTO chkPub FROM `nextData`.`articles`
         WHERE `id` = articleId AND `dtPublish` IS NOT NULL;
-    IF chk > 0 THEN
+    IF chkPub > 0 THEN
         SELECT `articles`.`id`, `teaser`, `title`, `articles`.`uri`,
             published(`dtPublish`) AS pubDate, `media`.`uri` AS picUri
         FROM `nextData`.`articles` AS related
@@ -171,7 +171,8 @@ BEGIN
             AND `article_tags`.`idTag` IN
             ( SELECT `idTag` FROM `nextData`.`article_tags` WHERE `idArticle` = articleId )
         LEFT JOIN `media` ON `articles`.`idTeasePic` = `media`.`id`
-        WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
+        WHERE `dtPublish` IS NOT NULL AND `articles`.`id` != articleId
+        ORDER BY `dtPublish` DESC;
     END IF;
 END $$
 

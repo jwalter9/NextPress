@@ -1,6 +1,6 @@
 -- 
 --  NextPress Core Admin (SSL) Procedures
---  Copyright (C) 2016 Lowadobe Web Services, LLC 
+--  Copyright (C) 2017 Lowadobe Web Services, LLC 
 --  web: http://nextpress.org/
 --  email: lowadobe@gmail.com
 --
@@ -136,38 +136,6 @@ BEGIN
     END IF;
 END $$
 
-DROP PROCEDURE IF EXISTS `PageEditor` $$
-CREATE PROCEDURE `PageEditor` (INOUT pageUri VARCHAR(512), INOUT pageTpl VARCHAR(1024),
-                               INOUT pageMobile TINYINT, INOUT pageContent TEXT,
-                               OUT pagePub TINYINT)
-BEGIN
-    DECLARE userId BIGINT DEFAULT 0;
-    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
-    IF userId > 0 THEN
-        IF pageContent IS NOT NULL AND TRIM(pageContent) != '' THEN
-            IF pageTpl IS NULL OR pageTpl = '' THEN
-                SET pageTpl = `nextData`.`urize`(REPLACE(pageUri,'/',''));
-            END IF;
-            IF pageMobile IS NULL THEN
-                SET pageMobile = 0;
-            END IF;
-            REPLACE INTO `nextData`.`pages` (`uri`,`tpl`,`mobile`,`content`)
-                VALUES (`nextData`.`urize`(pageUri), pageTpl, pageMobile, pageContent);
-        END IF;
-        SELECT `uri`,`tpl`,`mobile`,`published`,`content`
-            INTO pageUri, pageTpl, pageMobile, pagePub, pageContent
-            FROM `nextData`.`pages` 
-            WHERE `uri` = pageUri AND `mobile` = pageMobile LIMIT 1;
-        SET @mvp_layout = 'popup';
-    ELSE
-        SET @mvp_template = 'Login';
-        SET @err = 'Please log in with Admin privileges';
-        REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
-            VALUES (@mvp_session, @mvp_remoteip, 
-                CONCAT('PageEditor?pageUri=',pageUri,'&pageMobile=',pageMobile));
-    END IF;
-END $$
-
 DROP PROCEDURE IF EXISTS `publishPage` $$
 CREATE PROCEDURE `publishPage` (IN pageUri VARCHAR(512), IN pageMobile TINYINT,
                                 IN invRev TINYINT)
@@ -178,63 +146,16 @@ BEGIN
     IF pageUri IS NULL THEN
         SET pageUri = '';
     END IF;
+    IF invRev IS NULL OR invRev != 0 THEN
+        SET invRev = 1;
+    END IF;
     
     IF userId > 0 THEN
-        IF invRev = 1 THEN
-            SET @err = `nextData`.`publishPage`(pageUri,pageMobile);
-        ELSE
-            SET @err = `nextData`.`removePage`(pageUri,pageMobile);
-        END IF;
+        UPDATE `nextData`.`pages` SET `published` = invRev
+            WHERE `uri` = pageUri AND `mobile` = pageMobile;
         SET chk = `nextData`.`findActiveDropins`();
     ELSE
         SET @err = 'Please log in with Admin privileges';
-    END IF;
-END $$
-
-DROP PROCEDURE IF EXISTS `Dropins` $$
-CREATE PROCEDURE `Dropins` ()
-BEGIN
-    DECLARE userId BIGINT DEFAULT 0;
-    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
-    IF userId > 0 THEN
-        SELECT `id`, `img` FROM `nextData`.`dropins` ORDER BY `id`;
-    ELSE
-        SET @mvp_template = 'Login';
-        SET @err = 'Please log in with Admin privileges';
-        REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
-            VALUES (@mvp_session, @mvp_remoteip, 'Pages');
-    END IF;
-END $$
-
-DROP PROCEDURE IF EXISTS `Media` $$
-CREATE PROCEDURE `Media` ()
-BEGIN
-    DECLARE userId BIGINT DEFAULT 0;
-    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
-    IF userId = 0 THEN
-        SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
-    END IF;
-    IF userId > 0 THEN
-        SELECT `media`.*, `nextData`.`published`(`dtAdded`) AS addedDate, 
-               `users`.`displayName`, `users`.`email` 
-            FROM `nextData`.`media`
-            JOIN `nextData`.`users` ON `media`.`idAuthor` = `users`.`id`
-            ORDER BY `dtAdded` DESC;
-        CALL `adminMenu`();
-    ELSE
-        SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author');
-        IF userId > 0 THEN
-            SELECT `media`.*, `nextData`.`published`(`dtAdded`) AS addedDate
-                FROM `nextData`.`media` WHERE `idAuthor` = userId
-                ORDER BY `dtAdded` DESC;
-            CALL `adminMenu`();
-            SET @mvp_template = 'MyMedia';
-        ELSE
-            SET @mvp_template = 'Login';
-            SET @err = 'Please log in with Admin, Editor, or Author privileges';
-            REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
-                VALUES (@mvp_session, @mvp_remoteip, 'Media');
-        END IF;
     END IF;
 END $$
 
@@ -302,29 +223,6 @@ BEGIN
         SET @err = 'Please log in with Admin, Editor or Author privileges';
         REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
             VALUES (@mvp_session, @mvp_remoteip, 'AddMedia');
-    END IF;
-END $$
-
-DROP PROCEDURE IF EXISTS `deleteMedia` $$
-CREATE PROCEDURE `deleteMedia` (IN mid BIGINT)
-BEGIN
-    DECLARE userId, chk BIGINT DEFAULT 0;
-    DECLARE filepath VARCHAR(1024);
-    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
-    IF userId = 0 THEN
-        SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
-    END IF;
-    IF userId > 0 THEN
-        SELECT `uri` INTO filepath FROM `nextData`.`media` WHERE `id` = mid LIMIT 1;
-        SET filepath = CONCAT(`nextData`.`getConfig`('Site','webroot'), filepath);
-        SET chk = file_delete(filepath);
-        IF chk = 0 THEN
-            DELETE FROM `nextData`.`media` WHERE `id` = mid;
-        ELSE
-            SET @err = CONCAT('Error processing file (',chk,')');
-        END IF;
-    ELSE
-        SET @err = 'Please log in with Admin or Editor privileges';
     END IF;
 END $$
 

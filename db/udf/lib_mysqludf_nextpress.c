@@ -25,7 +25,7 @@ typedef long long longlong;
 #include <m_string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <sys/stat.h>
+
 #include <libesmtp.h>
 
 #ifdef HAVE_DLOPEN
@@ -206,53 +206,6 @@ my_ulonglong is_email(
 }
 
 
-/*============================ file_write ============================*/
-
-
-
-my_bool file_write_init(
-    UDF_INIT *initid
-,    UDF_ARGS *args
-,    char *message
-){
-    if(args->arg_count == 2
-    && args->arg_type[0]==STRING_RESULT
-    && args->arg_type[1]==STRING_RESULT){
-        return 0;
-    } else {
-        strcpy(
-            message,"Expected 2 parameters: filepath, content"
-        );        
-        return 1;
-    }
-}
-void file_write_deinit(
-    UDF_INIT *initid
-){
-}
-my_ulonglong file_write(
-    UDF_INIT *initid
-,    UDF_ARGS *args
-,    char *is_null
-,    char *error
-){
-    FILE *f = fopen(args->args[0], "w");
-    if(!f){
-        strcpy(error,"Cannot open file for write");
-        return 1;
-    };
-    long unsigned int writ = 
-        fwrite(args->args[1], sizeof(char), args->lengths[1], f);
-    int c = fclose(f);
-    if(writ < args->lengths[1]){
-        sprintf(error, "Wrote %lu of %lu bytes", writ, args->lengths[1]);
-        return 2;
-    };
-    c = chmod(args->args[0], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    return c;
-}
-
-
 /*============================ file_copy ============================*/
 
 
@@ -273,10 +226,12 @@ my_bool file_copy_init(
         return 1;
     }
 }
+
 void file_copy_deinit(
     UDF_INIT *initid
 ){
 }
+
 my_ulonglong file_copy(
     UDF_INIT *initid
 ,    UDF_ARGS *args
@@ -298,78 +253,6 @@ my_ulonglong file_copy(
     free(dst);
     free(cmd);
     return retVal;
-}
-
-
-/*============================ file_delete ============================*/
-
-
-
-my_bool file_delete_init(
-    UDF_INIT *initid
-,    UDF_ARGS *args
-,    char *message
-){
-    if(args->arg_count == 1
-    && args->arg_type[0]==STRING_RESULT){
-        return 0;
-    } else {
-        strcpy(
-            message,"Expected 1 parameter: file to delete"
-        );        
-        return 1;
-    }
-}
-void file_delete_deinit(
-    UDF_INIT *initid
-){
-}
-
-my_ulonglong file_delete(
-    UDF_INIT *initid
-,    UDF_ARGS *args
-,    char *is_null
-,    char *error
-){
-    my_ulonglong retVal;
-    char *del = calloc(args->lengths[0] + 1, sizeof(char));
-    if(!del) return 127;
-    strncpy(del, args->args[0], args->lengths[0]);
-    retVal = remove(del);
-    free(del);
-    return retVal;
-}
-
-
-
-/*============================ reload_apache ============================*/
-
-
-my_bool reload_apache_init(
-    UDF_INIT *initid
-    ,    UDF_ARGS *args
-    ,    char *message
-){
-    if(args->arg_count == 0){
-        return 0;
-    } else {
-        strcpy(message, "Expected no parameters");        
-        return 1;
-    };
-}
-    
-void reload_apache_deinit(
-    UDF_INIT *initid
-){
-}
-        
-my_ulonglong reload_apache(
-    UDF_INIT *initid
-    ,    UDF_ARGS *args
-    ,    char *is_null
-    ,    char *error
-){
-    return system("/usr/bin/sudo /etc/init.d/apache2 reload");
 }
 
 

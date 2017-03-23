@@ -1,7 +1,7 @@
 -- 
 --  NextPress Data Definitions, Functions & Procedures
 --  No direct access by webserver
---  Copyright (C) 2016 Lowadobe Web Services, LLC 
+--  Copyright (C) 2017 Lowadobe Web Services, LLC 
 --  web: http://nextpress.org/
 --  email: lowadobe@gmail.com
 --
@@ -141,121 +141,6 @@ BEGIN
     RETURN 0;
 END $$
 
-DROP FUNCTION IF EXISTS `publishPage` $$
-CREATE FUNCTION `publishPage`(pageUri VARCHAR(512), pageMobile TINYINT) 
-    RETURNS VARCHAR(64)
-MODIFIES SQL DATA
-BEGIN
-    DECLARE tplResult, piece, pageContent TEXT DEFAULT '';
-    DECLARE pos, pos2, len, piecePos, pieceEnd INT DEFAULT 1;
-    DECLARE dropinImg, dropinTpl, pageTpl VARCHAR(1024) DEFAULT '';
-    SELECT `content`, `tpl` INTO pageContent, pageTpl FROM `pages`
-        WHERE `uri` = pageUri AND `mobile` = pageMobile LIMIT 1;
-    SET len = LENGTH(pageContent);
-    WHILE len > pos DO
-        SET pos2 = LOCATE('<', pageContent, pos);
-        IF pos2 > 0 THEN
-            SET tplResult = CONCAT(tplResult, SUBSTR(pageContent, pos, pos2 - pos));
-            SET piece = LTRIM(SUBSTR(pageContent, pos2 + 1));
-            SET pieceEnd = LOCATE('>', piece);
-            SET piecePos = LOCATE('/media/dropins/', piece);
-            IF pieceEnd != 0 AND piecePos != 0 AND piecePos < pieceEnd THEN
-                SET piece = SUBSTR(piece, piecePos);
-                SET pieceEnd = LOCATE('"', piece);
-                SET dropinImg = SUBSTR(piece, 1, pieceEnd);
-                SET dropinTpl = '';
-                SELECT `tpl` INTO dropinTpl FROM `dropins` 
-                    WHERE `img` = dropinImg LIMIT 1;
-                IF dropinTpl != '' THEN
-                    SET tplResult = CONCAT(tplResult,'<# INCLUDE dropins/',dropinTpl,' #>');
-                END IF;
-                
-                SET pos = LOCATE('>', pageContent, pos2) + 1;
-                IF pos = 1 THEN
-                    SET pos = len;
-                END IF;
-            ELSE
-                SET pos = pos2 + 1;
-                SET tplResult = CONCAT(tplResult, '<');
-            END IF;
-        ELSE
-            SET tplResult = CONCAT(tplResult, SUBSTR(pageContent, pos));
-            SET pos = len;
-        END IF;
-    END WHILE;
-    
-    IF tplResult = '' THEN
-        RETURN 'Error: Resulting template is empty.';
-    END IF;
-    
-    SET pos = file_write(CONCAT(`getConfig`('Site','tplroot'),
-                         '/public/pages/',pageTpl,'.tpl'),tplResult);
-    IF pos != 0 THEN
-        RETURN CONCAT('Error saving template (',pos,')');
-    END IF;
-
-    UPDATE `nextData`.`pages` SET `published` = 1 
-        WHERE `uri` = pageUri AND `mobile` = pageMobile;
-
-    SET pos = reload_apache();
-    IF pos != 0 THEN
-        RETURN 'Webserver reload failed. Please manually restart/reload.';
-    END IF;
-    RETURN 'Page successfully published.';
-END $$
-
-DROP FUNCTION IF EXISTS `removePage` $$
-CREATE FUNCTION `removePage`(pageUri VARCHAR(512), pageMobile TINYINT) 
-    RETURNS VARCHAR(64)
-MODIFIES SQL DATA
-BEGIN
-    DECLARE pageTpl VARCHAR(1024) DEFAULT NULL;
-    DECLARE errno INT DEFAULT 0;
-    
-    UPDATE `nextData`.`pages` SET `published` = 0 
-        WHERE `uri` = pageUri AND `mobile` = pageMobile;
-
-    SELECT `tpl` INTO pageTpl FROM `pages` 
-        WHERE `uri` = pageUri AND `mobile` = pageMobile LIMIT 1;
-    SET errno = file_delete(CONCAT(`getConfig`('Site','tplroot'),
-                            '/public/pages/',pageTpl,'.tpl'));
-    
-    IF errno != 0 THEN
-        RETURN CONCAT('Error deleting template (',errno,')');
-    END IF;
-
-    SET errno = reload_apache();
-    IF errno != 0 THEN
-        RETURN 'Webserver reload failed. Please manually restart/reload.';
-    END IF;
-    RETURN 'Page successfully unpublished.';
-END $$
-
-DROP FUNCTION IF EXISTS `findActiveDropins` $$
-CREATE FUNCTION `findActiveDropins`() RETURNS TINYINT
-MODIFIES SQL DATA
-BEGIN
-    DECLARE pagecontent TEXT;
-    DECLARE done INT DEFAULT 0;
-    DECLARE cursr CURSOR FOR SELECT `content` FROM `pages` WHERE `published` = 1;
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-    UPDATE `dropins` SET `active` = 0;
-    OPEN cursr;
-    REPEAT
-        FETCH cursr INTO pagecontent;
-        IF NOT done THEN
-            WHILE LOCATE('/media/dropins/', pagecontent) > 0 DO
-                SET pagecontent = 
-                    SUBSTR(pagecontent, LOCATE('/media/dropins/', pagecontent) + 15);
-                UPDATE `dropins` SET `active` = 1
-                    WHERE `img` = TRIM(SUBSTR(pagecontent, 1, LOCATE('"', pagecontent) - 1));
-            END WHILE;
-        END IF;
-    UNTIL done END REPEAT;
-    CLOSE cursr;
-    RETURN 1;
-END $$
-
 DROP FUNCTION IF EXISTS `descript` $$
 CREATE FUNCTION `descript`(fromWeb TEXT) RETURNS TEXT
 NO SQL
@@ -370,6 +255,8 @@ BEGIN
     CLOSE cursr;
     RETURN list;
 END $$
+
+
 
 DROP PROCEDURE IF EXISTS `nextArticle` $$
 CREATE PROCEDURE `nextArticle` (articleId BIGINT)

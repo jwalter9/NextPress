@@ -1,8 +1,8 @@
 
   /tmp/** r,
-  /var/nextpress/** rw,
+  /var/nextpress/** r,
+  /var/nextpress/public/media/** rw,
   /bin/chmod ixr,
   /bin/cp ixr,
   /usr/bin/convert ixr,
-  /usr/bin/sudo ixr,
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 # 
 #  NextPress Installer
-#  Copyright (C) 2016 Lowadobe Web Services, LLC 
+#  Copyright (C) 2017 Lowadobe Web Services, LLC 
 #  web: http://nextpress.org/
 #  email: lowadobe@gmail.com
 #
@@ -116,7 +116,7 @@ else
 	echo "NextPress web templates successfully installed"
 fi
 
-chown -R mysql /var/nextpress
+chown -R mysql /var/nextpress/public/media
 chmod -R a+rX /var/nextpress
 
 cd ../etc

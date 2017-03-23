@@ -36,7 +36,7 @@ CREATE TABLE `admin_links` (
 
 LOCK TABLES `admin_links` WRITE;
 /*!40000 ALTER TABLE `admin_links` DISABLE KEYS */;
-INSERT INTO `admin_links` VALUES (10,'Dashboard','Dashboard'),(20,'Configuration','Configuration'),(30,'Pages','Pages'),(40,'Articles','Articles'),(50,'Media','Media'),(60,'Users','Users'),(70,'Categories','Categories'),(80,'ModerateComments','Moderate Comments'),(90,'WPImport','Import from WordPress'),(100,'MyProfile','My Profile'),(110,'Logout','Logout');
+INSERT INTO `admin_links` VALUES (10,'Dashboard','Dashboard'),(20,'Configuration','Configuration'),(30,'Pages','Pages'),(40,'Articles','Articles'),(60,'Users','Users'),(70,'Categories','Categories'),(80,'ModerateComments','Moderate Comments'),(90,'WPImport','Import from WordPress'),(100,'MyProfile','My Profile'),(110,'Logout','Logout');
 /*!40000 ALTER TABLE `admin_links` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -309,34 +309,6 @@ INSERT INTO `config_selection` VALUES ('yesno','No'),('yesno','Yes');
 UNLOCK TABLES;
 
 --
--- Table structure for table `dropins`
---
-
-DROP TABLE IF EXISTS `dropins`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `dropins` (
-  `id` varchar(32) NOT NULL,
-  `tpl` varchar(1024) NOT NULL,
-  `img` varchar(1024) NOT NULL,
-  `css` varchar(1024) DEFAULT NULL,
-  `js` varchar(1024) DEFAULT NULL,
-  `active` tinyint(4) DEFAULT '1',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `dropins`
---
-
-LOCK TABLES `dropins` WRITE;
-/*!40000 ALTER TABLE `dropins` DISABLE KEYS */;
-INSERT INTO `dropins` VALUES ('Archives','Archives','Archives.png','archives.css',NULL,0),('Article Content','ArticleContent','ArticleContent.png','article-content.css',NULL,0),('Article List','ArticleList','ArticleList.png','article-list.css',NULL,0),('Disqus Comments','DisqusComments','DisqusComments.png','disqus-comments.css',NULL,0),('Main Menu','MainMenu','MainMenu.png','main-menu.css',NULL,0),('Related Articles','RelatedArticles','RelatedArticles.png','related-articles.css',NULL,0),('Self-Hosted Comments','NextComments','NextComments.png','next-comments.css','next-comments.js',0);
-/*!40000 ALTER TABLE `dropins` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `mail_errors`
 --
 
@@ -401,7 +373,6 @@ CREATE TABLE `pages` (
   `tpl` varchar(1024) NOT NULL,
   `mobile` tinyint(4) NOT NULL DEFAULT '0',
   `published` tinyint(4) DEFAULT '0',
-  `content` text,
   PRIMARY KEY (`uri`,`mobile`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -412,7 +383,7 @@ CREATE TABLE `pages` (
 
 LOCK TABLES `pages` WRITE;
 /*!40000 ALTER TABLE `pages` DISABLE KEYS */;
-INSERT INTO `pages` VALUES ('','landingPage',0,1,''),('','landingPage_mobile',1,0,''),('404','404Page',0,1,'<div style=\"margin-left: 50px;\">\n    <h1>Page Not Found</h1>\n    <p>The page you have requested is not available</p>\n    <p>Please <a href=\"/\">click here</a> for the Home Page</p>\n</div>\n'),('err','errorPage',0,1,'<div style=\"margin-left: 50px;\">\n    <h1>System Error</h1>\n    <p>The Administrator has been notified.</p>\n    <p>Please <a href=\"/\">click here</a> for the Home Page</p>\n</div>\n'),('nextarticle','nextArticle',0,1,''),('nextarticle','nextArticle_mobile',1,0,''),('nextlist','nextList',0,1,''),('nextlist','nextList_mobile',1,0,'');
+INSERT INTO `pages` VALUES ('','landingPage',0,1),('','landingPage_mobile',1,0),('404','404Page',0,1),('err','errorPage',0,1),('nextarticle','nextArticle',0,1),('nextarticle','nextArticle_mobile',1,0),('nextlist','nextList',0,1),('nextlist','nextList_mobile',1,0);
 /*!40000 ALTER TABLE `pages` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -440,7 +411,7 @@ CREATE TABLE `role_admin_links` (
 
 LOCK TABLES `role_admin_links` WRITE;
 /*!40000 ALTER TABLE `role_admin_links` DISABLE KEYS */;
-INSERT INTO `role_admin_links` VALUES (1,10),(1,20),(1,30),(1,50),(1,60),(1,70),(1,90),(1,100),(1,110),(2,10),(2,40),(2,50),(2,100),(2,110),(3,10),(3,40),(3,100),(3,110),(4,10),(4,80),(4,100),(4,110),(5,10),(5,100),(5,110);
+INSERT INTO `role_admin_links` VALUES (1,10),(1,20),(1,30),(1,60),(1,70),(1,90),(1,100),(1,110),(2,10),(2,40),(2,100),(2,110),(3,10),(3,40),(3,100),(3,110),(4,10),(4,80),(4,100),(4,110),(5,10),(5,100),(5,110);
 /*!40000 ALTER TABLE `role_admin_links` ENABLE KEYS */;
 UNLOCK TABLES;
 
