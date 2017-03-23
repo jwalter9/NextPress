@@ -153,7 +153,6 @@ BEGIN
     IF userId > 0 THEN
         UPDATE `nextData`.`pages` SET `published` = invRev
             WHERE `uri` = pageUri AND `mobile` = pageMobile;
-        SET chk = `nextData`.`findActiveDropins`();
     ELSE
         SET @err = 'Please log in with Admin privileges';
     END IF;
@@ -671,14 +670,6 @@ BEGIN
         IF chk > 0 THEN
             SET chk = `nextData`.`resetArticleCategories`(NULL);
         END IF;
-        -- Here we cache the Categories dropin for speed
-        SET htmlCategories = `nextData`.`publicCategories`();
-        SET chk = file_write(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
-                             '/public/dropins/Categories.tpl'),htmlCategories);
-        IF chk = 0 THEN
-            SET chk = `reload_apache`();
-        END IF;
-        
         SET htmlCategories = `nextData`.`categoriesHtml`();
         SET @mvp_template = 'Categories';
         SET @err = 'Categories Successfully Updated';

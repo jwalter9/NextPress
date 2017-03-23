@@ -104,7 +104,6 @@ BEGIN
     
     SET @keywords = `nextData`.`getConfig`('Site','keywords');
     SET @domain = `nextData`.`getHost`(@mvp_headers);
-    SELECT * FROM `nextData`.`dropins` WHERE `active` = 1;
 END $$
 
 -- Procedures for DropIns
