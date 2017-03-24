@@ -9,7 +9,7 @@
                     #><option value="<# val #>"<# IF val = @.selected #> selected="selected"<# ENDIF #>><# val #></option><# ENDIF #>
                 <# ENDLOOP #></select>&nbsp;
                 <input type="button" onclick="setConfigSelect('<# id #>','<# section #>','<# section #>_<# id #>');" value="Save" />
-            <# ELSE #><input type="text" size="80" id="<# section #>_<# id #>" value="<# val #>" />&nbsp;
+            <# ELSE #><input type="text" size="80" id="<# section #>_<# id #>" value="<# escVal #>" />&nbsp;
                 <input type="button" onclick="setConfigText('<# id #>','<# section #>','<# section #>_<# id #>');" value="Save" />
             <# ENDIF #>
         </li>

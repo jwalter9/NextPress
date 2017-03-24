@@ -1,6 +1,6 @@
 <span class="notice">Click a Category to edit or remove; click and drag to place it.</span>
 <div class="dd" id="nestable">
-    <# htmlCategories #>
+    <# SET parentId = 1 #><# INCLUDE categoryRecursion #>
 </div>
 <div id="cat-edit" class="form-div">
     <ul class="form-entry">

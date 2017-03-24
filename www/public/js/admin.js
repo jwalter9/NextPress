@@ -153,38 +153,13 @@ function unpublish_article(id){
     });
 }
 
-function publish_page(uri, mobile){
-    $.ajax({
-        url: "/publishPage",
-        data: { pageUri: uri, pageMobile: mobile, invRev: 1 },
-        dataType: "json",
-        cache: false
-    }).done(function( data ) {
-        if(typeof data.PROC_OUT[0].err != 'undefined'){
-            alert(data.PROC_OUT[0].err);
-        }else{
-            alert('Page successfully published');
-            document.getElementById('pubit').style = 'display: none;';
-            document.getElementById('unpubit').style = 'display: block;';
-        };
-    });
-}
-
-function unpublish_page(uri, mobile){
-    $.ajax({
-        url: "/publishPage",
-        data: { pageUri: uri, pageMobile: mobile, invRev: 0 },
-        dataType: "json",
-        cache: false
-    }).done(function( data ) {
-        if(typeof data.PROC_OUT[0].err != 'undefined'){
-            alert(data.PROC_OUT[0].err);
-        }else{
-            alert('Page successfully un-published');
-            document.getElementById('unpubit').style = 'display: none;';
-            document.getElementById('pubit').style = 'display: block;';
-        };
-    });
+function edit_page(tpl, uri, mob, pub){
+    document.getElementById('pageTpl').value = tpl;
+    document.getElementById('tplLabel').innerHTML = tpl;
+    document.getElementById('uri').value = uri;
+    document.getElementById('pageMobile').checked = (mob == 1 ? 'checked' : '');
+    document.getElementById('pagePublished').checked = (pub == 1 ? 'checked' : '');
+    document.getElementById('tpl-edit').style = 'display: block;';
 }
 
 $(document).ready(function()

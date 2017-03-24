@@ -153,7 +153,7 @@ END $$
 DROP PROCEDURE IF EXISTS `MainMenu` $$
 CREATE PROCEDURE `MainMenu`(OUT htmlMenu TEXT)
 BEGIN
-    SET htmlMenu = `nextData`.`publicCategories`();
+    SET htmlMenu = `nextData`.`getConfig`('Site','mainMenu');
 END $$
 
 DROP PROCEDURE IF EXISTS `RelatedArticles` $$

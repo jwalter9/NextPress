@@ -126,7 +126,8 @@ BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
-        SELECT * FROM `nextData`.`pages` ORDER BY `uri`,`mobile`;
+        SET @err = `nextData`.`refreshPages`();
+        SELECT * FROM `nextData`.`pages` ORDER BY `published` DESC, `tpl`;
         CALL `adminMenu`();
     ELSE
         SET @mvp_template = 'Login';
@@ -136,25 +137,39 @@ BEGIN
     END IF;
 END $$
 
-DROP PROCEDURE IF EXISTS `publishPage` $$
-CREATE PROCEDURE `publishPage` (IN pageUri VARCHAR(512), IN pageMobile TINYINT,
-                                IN invRev TINYINT)
+DROP PROCEDURE IF EXISTS `UpdatePage` $$
+CREATE PROCEDURE `UpdatePage` (IN pageTpl VARCHAR(512), IN pageUri VARCHAR(512),
+                               IN pageMobile TINYINT, IN pagePublished TINYINT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
-    DECLARE pubDate DATETIME DEFAULT NULL;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF pageUri IS NULL THEN
         SET pageUri = '';
     END IF;
-    IF invRev IS NULL OR invRev != 0 THEN
-        SET invRev = 1;
+    IF pageMobile IS NULL THEN
+        SET pageMobile = 0;
+    END IF;
+    IF pagePublished IS NULL THEN
+        SET pagePublished = 0;
     END IF;
     
     IF userId > 0 THEN
-        UPDATE `nextData`.`pages` SET `published` = invRev
-            WHERE `uri` = pageUri AND `mobile` = pageMobile;
+        UPDATE `nextData`.`pages` SET `uri` = pageUri, `mobile` = pageMobile
+            WHERE `tpl` = pageTpl;
+        SELECT COUNT(`tpl`) INTO chk FROM `nextData`.`pages`
+            WHERE `tpl` = pageTpl AND `published` > -1;
+        IF chk > 0 THEN
+            UPDATE `nextData`.`pages` SET `published` = pagePublished 
+                WHERE `tpl` = pageTpl;
+        END IF;
+        SELECT * FROM `nextData`.`pages` ORDER BY `published` DESC, `tpl`;
+        CALL `adminMenu`();
+        SET @mvp_template = 'Pages';
     ELSE
+        SET @mvp_template = 'Login';
         SET @err = 'Please log in with Admin privileges';
+        REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
+            VALUES (@mvp_session, @mvp_remoteip, 'Pages');
     END IF;
 END $$
 
@@ -376,7 +391,8 @@ BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
-        SELECT * FROM `nextData`.`config` ORDER BY `ord`;
+        SELECT *, REPLACE(`val`,'"','&quot;') AS escVal 
+            FROM `nextData`.`config` ORDER BY `ord`;
         SELECT * FROM `nextData`.`config_selection`;
         CALL `adminMenu`();
     ELSE
@@ -393,7 +409,7 @@ BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
-        SET @err = `nextData`.`setConfig`(pid, cid, cval);
+        SET @err = `nextData`.`setConfig`(pid, cid, REPLACE(cval, '&quot;', '"'));
         IF @err < 1 THEN
             SET @err = 'This configuration item does not exist?';
         ELSE
@@ -465,7 +481,7 @@ END $$
 DROP PROCEDURE IF EXISTS `ArticleEditor` $$
 CREATE PROCEDURE `ArticleEditor` (INOUT articleId BIGINT, IN contentin text, 
                                   IN titlein varchar(256), IN uriin varchar(256),
-                                  IN catId BIGINT, OUT catSelect TEXT)
+                                  IN catId BIGINT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
@@ -487,7 +503,8 @@ BEGIN
             END IF;
         END IF;
         SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
-        SET catSelect = `nextData`.`categorySelector`(articleId);
+        SELECT *, `nextData`.`catIndent`(`idParent`) AS indent 
+            FROM `nextData`.`categories` WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
         SET @mvp_layout = 'popup';
     ELSE
         SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author');
@@ -516,7 +533,8 @@ BEGIN
                 END IF;
             END IF;
             SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
-            SET catSelect = `nextData`.`catSelector`(articleId);
+            SELECT *, `nextData`.`catIndent`(`idParent`) AS indent 
+                FROM `nextData`.`categories` WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
             SET @mvp_layout = 'popup';
         ELSE
             SET @mvp_template = 'Login';
@@ -645,12 +663,12 @@ BEGIN
 END $$
 
 DROP PROCEDURE IF EXISTS `Categories` $$
-CREATE PROCEDURE `Categories` (OUT htmlCategories TEXT)
+CREATE PROCEDURE `Categories` ()
 BEGIN
     DECLARE userId, tmpord BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
-        SET htmlCategories = `nextData`.`categoriesHtml`();
+        SELECT * FROM `nextData`.`categories` WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
         CALL `adminMenu`();
     ELSE
         SET @err = 'Please log in with Admin privileges.';
@@ -661,7 +679,7 @@ BEGIN
 END $$
 
 DROP PROCEDURE IF EXISTS `UpdateCategories` $$
-CREATE PROCEDURE `UpdateCategories` (INOUT htmlCategories TEXT)
+CREATE PROCEDURE `UpdateCategories` (IN htmlCategories TEXT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
@@ -669,8 +687,10 @@ BEGIN
         SET chk = `nextData`.`categoryHtmlParse`(htmlCategories);
         IF chk > 0 THEN
             SET chk = `nextData`.`resetArticleCategories`(NULL);
+            SET chk = `nextData`.`setConfig`('Site','mainMenu',
+                `nextData`.`publicCategoriesHtml`());
         END IF;
-        SET htmlCategories = `nextData`.`categoriesHtml`();
+        SELECT * FROM `nextData`.`categories` WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
         SET @mvp_template = 'Categories';
         SET @err = 'Categories Successfully Updated';
         CALL `adminMenu`();
@@ -682,179 +702,36 @@ BEGIN
     END IF;
 END $$
 
-DROP PROCEDURE IF EXISTS `ModerateComments` $$
-CREATE PROCEDURE `ModerateComments` (IN spm INT, IN appr INT)
+DROP PROCEDURE IF EXISTS `MailErrors` $$
+CREATE PROCEDURE `MailErrors` ()
 BEGIN
-    DECLARE schk INT DEFAULT 0;
-    SET schk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Moderator');
-    IF schk > 0 THEN
-        IF spm IS NULL THEN SET spm = 0; END IF;
-        IF appr IS NULL THEN SET appr = 0; END IF;
-        SELECT `comments`.*,
-            `users`.`displayName`, `users`.`avatarUri`,
-            `articles`.`title` AS arTitle, `articles`.`uri` AS arUri, `articles`.`dtPublish` AS dtArticle,
-            SUM(`comment_votes`.`voteVal`) AS voteTotal, COUNT(`comment_votes`.`idUser`) AS voteCount,
-            parent.`dtComment` AS dtParent, parent.`content` AS pcontent,
-            puser.`displayName` AS pCommenter, puser.`avatarUri` AS pAvatar
-        FROM `nextData`.`comments`
-            JOIN `nextData`.`users` ON `comments`.`idCommenter` = `users`.`id`
-            JOIN `nextData`.`articles` ON `comments`.`idArticle` = `articles`.`id`
-            LEFT JOIN `nextData`.`comment_votes` ON `comments`.`id` = `comment_votes`.`idComment`
-            LEFT JOIN `nextData`.`comments` parent ON `comments`.`idParent` = parent.`id`
-            LEFT JOIN `nextData`.`users` puser ON parent.`idCommenter` = puser.`id`
-        WHERE `comments`.`approved` = appr AND `comments`.`spam` = spm
-            GROUP BY `comments`.`id` ORDER BY `comments`.`id`;
+    DECLARE userId BIGINT DEFAULT 0;
+    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
+    IF userId > 0 THEN
+        SELECT * FROM `nextData`.`mail_errors`;
         CALL `adminMenu`();
     ELSE
+        SET @err = 'Please log in with Admin privileges.';
         SET @mvp_template = 'Login';
-        SET @err = 'Please log in with Moderator privileges';
+        REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
+            VALUES (@mvp_session, @mvp_remoteip, 'MailErrors');
     END IF;
 END $$
 
-DROP PROCEDURE IF EXISTS `deleteComment` $$
-CREATE PROCEDURE `deleteComment` (IN idComment BIGINT)
+DROP PROCEDURE IF EXISTS `ClearMailErrors` $$
+CREATE PROCEDURE `ClearMailErrors` ()
 BEGIN
-    DECLARE schk, replyCount INT DEFAULT 0;
-    SET schk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Moderator');
-    IF schk > 0 THEN
-        SELECT COUNT(`id`) INTO replyCount FROM `nextData`.`comments` WHERE `idParent` = idComment;
-        IF replyCount > 0 THEN
-            UPDATE `nextData`.`comments` SET `content` = '&lt; &lt; Comment Deleted &gt; &gt;' WHERE `id` = idComment;
-        ELSE
-            DELETE FROM `nextData`.`comments` WHERE `id` = idComment;
-        END IF;
+    DECLARE userId BIGINT DEFAULT 0;
+    SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
+    IF userId > 0 THEN
+        DELETE FROM `nextData`.`mail_errors`;
+        SET @mvp_template = 'MailErrors';
+        CALL `adminMenu`();
     ELSE
-        SET @err = 'Please log in with Moderator privileges';
-    END IF;
-END $$
-
-DROP PROCEDURE IF EXISTS `markSpam` $$
-CREATE PROCEDURE `markSpam` (IN idComment BIGINT)
-BEGIN
-    DECLARE schk INT DEFAULT 0;
-    SET schk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Moderator');
-    IF schk > 0 THEN
-        UPDATE `nextData`.`comments` SET `spam` = 1, `approved` = 0 WHERE `id` = idComment;
-    ELSE
-        SET @err = 'Please log in with Moderator privileges';
-    END IF;
-END $$
-
-DROP PROCEDURE IF EXISTS `approveComment` $$
-CREATE PROCEDURE `approveComment` (IN idComment BIGINT)
-BEGIN
-    DECLARE schk INT DEFAULT 0;
-    SET schk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Moderator');
-    IF schk > 0 THEN
-        UPDATE `nextData`.`comments` SET `spam` = 0, `approved` = 1 WHERE `id` = idComment;
-    ELSE
-        SET @err = 'Please log in with Moderator privileges';
-    END IF;
-END $$
-
-DROP PROCEDURE IF EXISTS `voteComment` $$
-CREATE PROCEDURE `voteComment` (IN cid BIGINT, IN vote INT)
-BEGIN
-    DECLARE schk, guestVotes, guestVoter INT DEFAULT 0;
-    IF TRIM(LOWER(`nextData`.`getConfig`('Comments','voting'))) = 'yes' THEN
-        IF vote IS NULL OR vote > 0 THEN
-            SET vote = 1;
-        ELSEIF vote < 0 THEN
-            SET vote = -1;
-        END IF;
-        SET schk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Commenter');
-        IF schk > 0 THEN
-            REPLACE INTO `nextData`.`comment_votes` (`idComment`, `idUser`, `voteVal`) VALUES (cid, schk, vote);
-        ELSEIF TRIM(LOWER(`nextData`.`getConfig`('Comments','votingLogin'))) = 'no' THEN
-            SET guestVoter = `nextData`.`getConfig`('Comments','guestUserId');
-            SELECT `voteVal` INTO guestVotes FROM `nextData`.`comment_votes` WHERE `idComment` = cid AND `idUser` = guestVoter;
-            SET vote = guestVotes + vote;
-            REPLACE INTO `nextData`.`comment_votes` (`idComment`, `idUser`, `voteVal`) VALUES (cid, guestVoter, vote);
-        END IF;
-    END IF;
-END $$
-
--- Comments are "admin" because they check the https session cookie
-DROP PROCEDURE IF EXISTS `getComments` $$
-CREATE PROCEDURE `getComments` (IN articleId INT, IN top BIGINT, OUT total INT, OUT earliest VARCHAR(32),
-                                OUT loggedIn INT, OUT cmntrName VARCHAR(1024), OUT cmntrAvatar VARCHAR(1024),
-                                OUT moderator INT, OUT showAvatars INT)
-BEGIN
-
-END $$
-
-DROP PROCEDURE IF EXISTS `SubmitComment` $$
-CREATE PROCEDURE `SubmitComment` (IN articleId INT, IN replyId BIGINT, IN eaddr VARCHAR(1024), IN pass VARCHAR(1024),
-                                  IN commentText TEXT, IN nReply INT, IN nThread INT, IN nDigest INT)
-BEGIN
-    DECLARE schk, appr, spm, closeDays INT DEFAULT 0;
-    DECLARE tid, cid BIGINT DEFAULT 0;
-    DECLARE pubDate DATETIME;
-    
-    SET closeDays = TRIM(LOWER(`nextData`.`getConfig`('Comments','closeAfter')));
-    SELECT `dtPublish` INTO pubDate FROM `nextData`.`articles` WHERE `id` = articleId LIMIT 1;
-    IF pubDate IS NULL OR (closeDays > 0 AND DATE_ADD(pubDate, INTERVAL closeDays DAY) < UTC_TIMESTAMP()) THEN
-        SET @err = 'Comments are closed for this article';
-    ELSE
-        IF eaddr IS NOT NULL AND eaddr != '' AND pass IS NOT NULL AND pass != '' THEN
-            SELECT `idUser` INTO schk FROM `nextData`.`users` WHERE `email` = eaddr AND `password` = SHA2(pass, 512) LIMIT 1;
-            IF schk > 0 THEN
-                REPLACE INTO `nextData`.`sessions` (`id`,`idUser`,`ipAddress`) VALUES (@mvp_session, schk, @mvp_remoteip);
-            ELSE
-                SET @err = 'Unrecognized Login Credentials... ';
-            END IF;
-        END IF;
-        -- checkSession is done outside of Login
-        SET schk = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Commenter');
-    
-        IF schk > 0 OR TRIM(LOWER(`nextData`.`getConfig`('Comments','loginOnly'))) = 'no' THEN
-            -- Who is posting?
-            IF schk = 0 THEN -- Guest Commenter
-                SET schk = `nextData`.`getConfig`('Comments','guestUserId');
-            ELSE
-                IF TRIM(LOWER(`nextData`.`getConfig`('Comments','modPrevApproved'))) = 'yes' THEN
-                    SELECT COUNT(`id`) INTO appr FROM `nextData`.`comments` WHERE `idCommenter` = schk AND `approved` > 0;
-                END IF;
-            END IF;
-            SELECT CONCAT(@err, 'Posted as ', `displayName`) INTO @err
-                FROM `nextData`.`users` WHERE `id` = schk LIMIT 1;
-
-            -- Set parent id and top level id
-            IF replyId IS NOT NULL AND replyId > 0 AND TRIM(LOWER(`nextData`.`getConfig`('Comments','threaded'))) = 'yes' THEN
-                -- reply, so get thread starter (idTop)
-                SELECT `idTop` INTO tid FROM `nextData`.`comments` WHERE `id` = replyId LIMIT 1;
-                IF tid = 0 THEN
-                    SET tid = replyId;
-                END IF;
-            ELSE
-                SET replyId = 0;
-            END IF;
-            
-            IF TRIM(LOWER(`nextData`.`getConfig`('Comments','modAll'))) = 'yes' THEN
-                SET appr = 0;
-            ELSE
-                -- Spam Blacklist?
-                SET spm = `nextData`.`applyBlacklist`(commentText, `nextData`.`getConfig`('Comments', 'blacklist'));
-                IF appr = 0 AND spm = 0 THEN
-                    -- Hold Blacklist?
-                    SET appr = 1 - `nextData`.`applyBlacklist`(commentText, `nextData`.`getConfig`('Comments', 'modlist'));
-                    IF appr = 0 THEN
-                        -- And finally, too many links?
-                        SET appr = `nextData`.`linkFilter`(commentText, `nextData`.`getConfig`('Comments', 'modlistNumlinks'));
-                    END IF;
-                END IF;
-            END IF;
-
-            INSERT INTO `nextData`.`comments` (`idArticle`,`idCommenter`,`idParent`,`idTop`,`dtComment`,`content`,`tease`,`approved`,`spam`)
-                VALUES (articleId, schk, replyId, tid, UTC_TIMESTAMP(), `nextData`.`descript`(commentText), `nextData`.`teaseComment`(commentText), appr, spm);
-            SET cid = LAST_INSERT_ID();
-            
-            -- And perform notifications after the insert is completed 
-            -- this way the Akismet plugin can run off its trigger first
-            SET schk = `nextData`.`commentNotifications`(cid);
-        ELSE
-            SET @err = CONCAT(@err, 'You must login to submit comments');
-        END IF;
+        SET @err = 'Please log in with Admin privileges.';
+        SET @mvp_template = 'Login';
+        REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
+            VALUES (@mvp_session, @mvp_remoteip, 'MailErrors');
     END IF;
 END $$
 
@@ -889,7 +766,7 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
     
     SET parseText = xml;
     WHILE LOCATE('</wp:category>', parseText) > 0 DO
-        SET xid = 0;
+        SET xid = 1;
         SELECT `id` INTO xid FROM `nextData`.`categories`
             WHERE `uri` = ExtractValue(parseText, '//wp:category_parent')
             LIMIT 1;
@@ -977,51 +854,6 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
                 SET parseItem = 
                     SUBSTR(parseItem, LOCATE('</category>', parseItem) + 11);
             END WHILE;
-
-            IF rid > 0 THEN
-            SET parseItem = itemXML;
-            WHILE LOCATE('</wp:comment>', parseItem) > 0 DO
-                SET yid = 0;
-                SELECT `id` INTO yid FROM `nextData`.`users`
-                WHERE `displayName` = 
-                    ExtractValue(parseItem,'//wp:comment_author')
-                    OR `email` = 
-                    ExtractValue(parseItem,'//wp:comment_author_email') LIMIT 1;
-                IF yid = 0 THEN
-                    INSERT INTO `nextData`.`users`(`displayName`,
-                        `email`,`url`) VALUES (
-                        ExtractValue(parseItem, '//wp:comment_author'),
-                        ExtractValue(parseItem, '//wp:comment_author_email'),
-                        ExtractValue(parseItem, '//wp:comment_author_url'));
-                    SET yid = LAST_INSERT_ID();
-                    INSERT INTO `user_roles`(`idUser`,`idRole`)VALUES(yid,rid);
-                END IF;
-
-                SET zid = 0;
-                SET tid = 0;
-                SET pid = ExtractValue(parseItem, '//wp:comment_parent');
-                IF pid > 0 THEN
-                    SELECT `id` INTO zid FROM `nextData`.`comments`
-                        WHERE `idwp` = pid LIMIT 1;
-                    SELECT `idTop` INTO tid FROM `nextData`.`comments`
-                        WHERE `id` = zid LIMIT 1;
-                    IF tid = 0 THEN
-                        SET tid = zid;
-                    END IF;
-                END IF;
-                
-                INSERT INTO `nextData`.`comments`(`idArticle`,`idCommenter`,
-                    `idParent`,`idTop`,`idwp`,`dtComment`,`content`,`approved`)
-                    VALUES (xid, yid, zid, tid,
-                    ExtractValue(parseItem, '//wp:comment_id'),
-                    ExtractValue(parseItem, '//wp:comment_date_gmt'),
-                    ExtractValue(parseItem, '//wp:comment_content'),
-                    ExtractValue(parseItem, '//wp:comment_approved'));
-                
-                SET parseItem = 
-                    SUBSTR(parseItem,LOCATE('</wp:comment>', parseItem) + 13);
-            END WHILE;
-            END IF;
         END IF;
         
         SET parseText = SUBSTR(parseText, LOCATE('</item>', parseText) + 7);

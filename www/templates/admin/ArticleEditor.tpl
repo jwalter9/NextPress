@@ -8,9 +8,12 @@
             <li class="editor-entry">
                 <input type="submit" value="Save" />
             </li>
-        <# IF catSelect #>
+        <# IF categories.NUM_ROWS > 0 #>
             <li class="editor-entry">
-                Category: <# catSelect #>
+                Category: <select name="catId"><option>Select a Category</option><# LOOP categories #>
+                <option value="<# id #>"<# IF id = articles.idCategory #> selected="selected"<# ENDIF #>>
+                    <# indent #><# displayName #></option><# ENDLOOP #>
+                </select>
             </li>
         <# ENDIF #>
             <li class="editor-entry">

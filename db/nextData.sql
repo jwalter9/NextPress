@@ -36,7 +36,7 @@ CREATE TABLE `admin_links` (
 
 LOCK TABLES `admin_links` WRITE;
 /*!40000 ALTER TABLE `admin_links` DISABLE KEYS */;
-INSERT INTO `admin_links` VALUES (10,'Dashboard','Dashboard'),(20,'Configuration','Configuration'),(30,'Pages','Pages'),(40,'Articles','Articles'),(60,'Users','Users'),(70,'Categories','Categories'),(80,'ModerateComments','Moderate Comments'),(90,'WPImport','Import from WordPress'),(100,'MyProfile','My Profile'),(110,'Logout','Logout');
+INSERT INTO `admin_links` VALUES (10,'Dashboard','Dashboard'),(20,'Configuration','Configuration'),(30,'Pages','Pages'),(40,'Articles','Articles'),(60,'Users','Users'),(70,'Categories','Categories'),(80,'MailErrors','Mail Errors'),(90,'WPImport','Import from WordPress'),(100,'MyProfile','My Profile'),(110,'Logout','Logout');
 /*!40000 ALTER TABLE `admin_links` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -159,104 +159,6 @@ INSERT INTO `categories` VALUES (1,1,'','',0);
 UNLOCK TABLES;
 
 --
--- Table structure for table `comment_notifications`
---
-
-DROP TABLE IF EXISTS `comment_notifications`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `comment_notifications` (
-  `idUser` bigint(20) NOT NULL,
-  `idComment` bigint(20) unsigned NOT NULL,
-  `notifyReplies` tinyint(4) DEFAULT '0',
-  `notifyThreads` tinyint(4) DEFAULT '0',
-  `notifyAsDigest` tinyint(4) DEFAULT '0',
-  PRIMARY KEY (`idUser`,`idComment`),
-  KEY `fk_notify_user` (`idUser`),
-  KEY `fk_notify_comment` (`idComment`),
-  CONSTRAINT `fk_notify_comment` FOREIGN KEY (`idComment`) REFERENCES `comments` (`id`),
-  CONSTRAINT `fk_notify_user` FOREIGN KEY (`idUser`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `comment_notifications`
---
-
-LOCK TABLES `comment_notifications` WRITE;
-/*!40000 ALTER TABLE `comment_notifications` DISABLE KEYS */;
-/*!40000 ALTER TABLE `comment_notifications` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `comment_votes`
---
-
-DROP TABLE IF EXISTS `comment_votes`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `comment_votes` (
-  `idComment` bigint(20) unsigned NOT NULL,
-  `idUser` bigint(20) NOT NULL,
-  `voteVal` tinyint(4) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`idComment`,`idUser`),
-  KEY `fk_vote_comment` (`idComment`),
-  KEY `fk_vote_user` (`idUser`),
-  CONSTRAINT `fk_vote_comment` FOREIGN KEY (`idComment`) REFERENCES `comments` (`id`),
-  CONSTRAINT `fk_vote_user` FOREIGN KEY (`idUser`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `comment_votes`
---
-
-LOCK TABLES `comment_votes` WRITE;
-/*!40000 ALTER TABLE `comment_votes` DISABLE KEYS */;
-/*!40000 ALTER TABLE `comment_votes` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `comments`
---
-
-DROP TABLE IF EXISTS `comments`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `comments` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `idArticle` bigint(20) NOT NULL DEFAULT '0',
-  `idCommenter` bigint(20) NOT NULL DEFAULT '0',
-  `idParent` bigint(20) unsigned NOT NULL DEFAULT '0',
-  `idTop` bigint(20) unsigned NOT NULL DEFAULT '0',
-  `idwp` bigint(20) unsigned NOT NULL DEFAULT '0',
-  `dtComment` datetime NOT NULL,
-  `content` text NOT NULL,
-  `tease` varchar(140) NOT NULL DEFAULT '',
-  `approved` tinyint(4) NOT NULL DEFAULT '1',
-  `spam` tinyint(4) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  KEY `fk_comment_article` (`idArticle`),
-  KEY `fk_comment_user` (`idCommenter`),
-  KEY `fk_comment_parent` (`idParent`),
-  KEY `fk_comment_top` (`idTop`),
-  CONSTRAINT `fk_comment_article` FOREIGN KEY (`idArticle`) REFERENCES `articles` (`id`),
-  CONSTRAINT `fk_comment_parent` FOREIGN KEY (`idParent`) REFERENCES `comments` (`id`),
-  CONSTRAINT `fk_comment_top` FOREIGN KEY (`idTop`) REFERENCES `comments` (`id`),
-  CONSTRAINT `fk_comment_user` FOREIGN KEY (`idCommenter`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `comments`
---
-
-LOCK TABLES `comments` WRITE;
-/*!40000 ALTER TABLE `comments` DISABLE KEYS */;
-/*!40000 ALTER TABLE `comments` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `config`
 --
 
@@ -280,7 +182,7 @@ CREATE TABLE `config` (
 
 LOCK TABLES `config` WRITE;
 /*!40000 ALTER TABLE `config` DISABLE KEYS */;
-INSERT INTO `config` VALUES ('404Page','','404error','Site','404 error page for inactive, missing pages or broken links',9),('articleLayout','','nextArticle','Site','Article Layout Page',4),('articleLayoutMobile','','nextArticle_mobile','Site','Mobile version of Article Layout Page',5),('authorSelfPublish','yesno','No','Site','Authors may publish their own articles',13),('avatarResize','','-resize \'60x60>\'','Media','Avatar conversion directive (for ImageMagick convert)',22),('blacklist','','','Comments','Comments will be marked as spam if they contain any of these words, urls, or email addresses',50),('byDefault','yesno','Yes','Comments','Comments are open for articles by default - May be overridden for individual articles',40),('closeAfter','','14','Comments','Comments close after [number] days - set to 0 to disable',43),('date_format','','%b %D, %Y','Site','Date format',10),('defaultAvatar','','/media/avatars/defaultAvatar.png','Comments','Default Avatar shown with comments [relative uri - blank for none]',47),('default_uri','','','Site','Default uri (landing page or page not found)',3),('errorPage','','error','Site','System error page for internal errors',8),('guestUserId','','2','Comments','ID of User for Comments with no registration/log in',42),('image_formats','','|jpg|jpeg|png|gif|tiff|svg|','Media','Recognized image file extensions',23),('keywords','','','Site','Search engine keywords',12),('listLayout','','nextList','Site','Article List Layout Page',6),('listLayoutMobile','','nextList_mobile','Site','Mobile version of Article List Layout Page',7),('loginOnly','yesno','No','Comments','Commenters must register/log in to comment',41),('mediaResize','','-resize \'1024x600>\'','Media','Image conversion directive (for ImageMagick convert)',20),('mediaThumbsize','','-resize \'120x90>\'','Media','Thumbnail conversion directive (for ImageMagick convert)',21),('modAll','yesno','No','Comments','All comments will be held for moderation',51),('modlist','','','Comments','Comments will be held for moderation if they contain any of these words, urls, or email addresses',53),('modlistNumlinks','','','Comments','Comments will be held for moderation if they contain more than [number] links',54),('modPrevApproved','yesno','Yes','Comments','Previously approved Commenters will be automatically approved',52),('notifications','yesno','Yes','Site','Make notifications of new articles available',14),('notifyAdmin','yesno','No','Comments','Email Administrators when comments are submitted',57),('notifyAdminHeld','yesno','No','Comments','Email Administrators when comments are held for moderation',58),('notifyAll','yesno','Yes','Comments','Email Article Authors when comments are submitted',55),('notifyHeld','yesno','No','Comments','Email Moderators when comments are held for moderation',56),('registration','yesno','No','Site','Allow Guests to Register (primarily for new article notification)',15),('showAvatars','yesno','Yes','Comments','User Avatars shown with comments',46),('tagline','','A NextPress Site','Site','Site Tagline',11),('threadDepth','','3','Comments','Reply depth to display in threaded format',45),('threaded','yesno','No','Comments','Display comments in threaded format',44),('tplroot','','/var/nextpress/templates','Site','The absolute path of the template directory',2),('voting','yesno','Yes','Comments','Allow up/down voting on comments',48),('votingLogin','yesno','Yes','Comments','Require registration/log in for up/down voting on comments',49),('webroot','','/var/nextpress/public','Site','The absolute path of the web directory',1);
+INSERT INTO `config` VALUES ('404Page','','404error','Site','404 error page for inactive, missing pages or broken links',9),('articleLayout','','nextArticle','Site','Article Layout Page',4),('articleLayoutMobile','','nextArticle_mobile','Site','Mobile version of Article Layout Page',5),('authorSelfPublish','yesno','No','Site','Authors may publish their own articles',13),('avatarResize','','-resize \'60x60>\'','Media','Avatar conversion directive (for ImageMagick convert)',22),('blacklist','','','Comments','Comments will be marked as spam if they contain any of these words, urls, or email addresses',50),('byDefault','yesno','Yes','Comments','Comments are open for articles by default - May be overridden for individual articles',40),('closeAfter','','14','Comments','Comments close after [number] days - set to 0 to disable',43),('date_format','','%b %D, %Y','Site','Date format',10),('defaultAvatar','','/media/avatars/defaultAvatar.png','Comments','Default Avatar shown with comments [relative uri - blank for none]',47),('default_uri','','','Site','Default uri (landing page or page not found)',3),('errorPage','','error','Site','System error page for internal errors',8),('guestUserId','','2','Comments','ID of User for Comments with no registration/log in',42),('image_formats','','|jpg|jpeg|png|gif|tiff|svg|','Media','Recognized image file extensions',23),('keywords','','','Site','Search engine keywords',12),('listLayout','','nextList','Site','Article List Layout Page',6),('listLayoutMobile','','nextList_mobile','Site','Mobile version of Article List Layout Page',7),('loginOnly','yesno','No','Comments','Commenters must register/log in to comment',41),('mediaResize','','-resize \'1024x600>\'','Media','Image conversion directive (for ImageMagick convert)',20),('mediaThumbsize','','-resize \'120x90>\'','Media','Thumbnail conversion directive (for ImageMagick convert)',21),('modAll','yesno','No','Comments','All comments will be held for moderation',51),('modlist','','','Comments','Comments will be held for moderation if they contain any of these words, urls, or email addresses',53),('modlistNumlinks','','','Comments','Comments will be held for moderation if they contain more than [number] links',54),('modPrevApproved','yesno','Yes','Comments','Previously approved Commenters will be automatically approved',52),('notifications','yesno','Yes','Site','Make notifications of new articles available',14),('notifyAdmin','yesno','No','Comments','Email Administrators when comments are submitted',57),('notifyAdminHeld','yesno','No','Comments','Email Administrators when comments are held for moderation',58),('notifyAll','yesno','Yes','Comments','Email Article Authors when comments are submitted',55),('notifyHeld','yesno','No','Comments','Email Moderators when comments are held for moderation',56),('registration','yesno','No','Site','Allow Guests to Register (primarily for new article notification)',15),('showAvatars','yesno','Yes','Comments','User Avatars shown with comments',46),('tagline','','A NextPress Site','Site','Site Tagline',11),('threadDepth','','3','Comments','Reply depth to display in threaded format',45),('threaded','yesno','No','Comments','Display comments in threaded format',44),('tplroot','','/var/nextpress/templates','Site','The absolute path of the template directory',2),('voting','yesno','Yes','Comments','Allow up/down voting on comments',48),('votingLogin','yesno','Yes','Comments','Require registration/log in for up/down voting on comments',49),('webroot','','/var/nextpress/public','Site','The absolute path of the web directory',1),('mainMenu','','','Site','Cached html for Main Menu - this is automatically updated when Categories are altered',16);
 /*!40000 ALTER TABLE `config` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -369,11 +271,11 @@ DROP TABLE IF EXISTS `pages`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `pages` (
-  `uri` varchar(512) NOT NULL,
-  `tpl` varchar(1024) NOT NULL,
+  `tpl` varchar(512) NOT NULL,
+  `uri` varchar(512) NOT NULL DEFAULT '',
   `mobile` tinyint(4) NOT NULL DEFAULT '0',
   `published` tinyint(4) DEFAULT '0',
-  PRIMARY KEY (`uri`,`mobile`)
+  PRIMARY KEY (`tpl`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -383,7 +285,7 @@ CREATE TABLE `pages` (
 
 LOCK TABLES `pages` WRITE;
 /*!40000 ALTER TABLE `pages` DISABLE KEYS */;
-INSERT INTO `pages` VALUES ('','landingPage',0,1),('','landingPage_mobile',1,0),('404','404Page',0,1),('err','errorPage',0,1),('nextarticle','nextArticle',0,1),('nextarticle','nextArticle_mobile',1,0),('nextlist','nextList',0,1),('nextlist','nextList_mobile',1,0);
+INSERT INTO `pages` VALUES ('landingPage','',0,1),('landingPage_mobile','',1,0),('404Page','404',0,1),('errorPage','err',0,1),('nextArticle','nextarticle',0,1),('nextArticle_mobile','nextarticle',1,0),('nextList','nextlist',0,1),('nextList_mobile','nextlist',1,0);
 /*!40000 ALTER TABLE `pages` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -411,7 +313,7 @@ CREATE TABLE `role_admin_links` (
 
 LOCK TABLES `role_admin_links` WRITE;
 /*!40000 ALTER TABLE `role_admin_links` DISABLE KEYS */;
-INSERT INTO `role_admin_links` VALUES (1,10),(1,20),(1,30),(1,60),(1,70),(1,90),(1,100),(1,110),(2,10),(2,40),(2,100),(2,110),(3,10),(3,40),(3,100),(3,110),(4,10),(4,80),(4,100),(4,110),(5,10),(5,100),(5,110);
+INSERT INTO `role_admin_links` VALUES (1,10),(1,20),(1,30),(1,60),(1,70),(1,80),(1,90),(1,100),(1,110),(2,10),(2,40),(2,100),(2,110),(3,10),(3,40),(3,100),(3,110),(4,10),(4,100),(4,110);
 /*!40000 ALTER TABLE `role_admin_links` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -435,7 +337,7 @@ CREATE TABLE `roles` (
 
 LOCK TABLES `roles` WRITE;
 /*!40000 ALTER TABLE `roles` DISABLE KEYS */;
-INSERT INTO `roles` VALUES (1,'Admin'),(2,'Editor'),(3,'Author'),(4,'Moderator'),(5,'Commenter');
+INSERT INTO `roles` VALUES (1,'Admin'),(2,'Editor'),(3,'Author'),(4,'Subscriber');
 /*!40000 ALTER TABLE `roles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -514,7 +416,7 @@ CREATE TABLE `user_roles` (
 
 LOCK TABLES `user_roles` WRITE;
 /*!40000 ALTER TABLE `user_roles` DISABLE KEYS */;
-INSERT INTO `user_roles` VALUES (1,1),(2,5);
+INSERT INTO `user_roles` VALUES (1,1);
 /*!40000 ALTER TABLE `user_roles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -545,7 +447,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'982f630ae2e1e67188b5ae7686f34fbd7a3e6db23e92f40a5080d29a1cdf8efeb68c90e9eaf6f24c2f903f72e1778edd957560ff867c07adb4791c1be1c1f8c8',NULL,'Administrator','change.me@nextpress.org',NULL,NULL,0,0),(2,'982f630ae2e1e67188b5ae7686f34fbd7a3e6db23e92f40a5080d29a1cdf8efeb68c90e9eaf6f24c2f903f72e1778edd957560ff867c07adb4791c1be1c1f8c8',NULL,'Guest Commenter',NULL,NULL,NULL,0,0);
+INSERT INTO `users` VALUES (1,'982f630ae2e1e67188b5ae7686f34fbd7a3e6db23e92f40a5080d29a1cdf8efeb68c90e9eaf6f24c2f903f72e1778edd957560ff867c07adb4791c1be1c1f8c8',NULL,'Administrator','change.me@nextpress.org',NULL,NULL,0,0);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

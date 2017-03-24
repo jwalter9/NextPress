@@ -25,6 +25,7 @@ typedef long long longlong;
 #include <m_string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <dirent.h>
 
 #include <libesmtp.h>
 
@@ -254,6 +255,86 @@ my_ulonglong file_copy(
     free(cmd);
     return retVal;
 }
+
+
+/*============================ tpl_list ============================*/
+
+
+my_bool tpl_list_init(
+	UDF_INIT *initid
+,	UDF_ARGS *args
+,	char *message
+){
+	if(args->arg_count == 1 && args->arg_type[0]==STRING_RESULT){
+		return 0;
+	}else{
+		strcpy(message, "Expected directory path");		
+		return 1;
+	};
+}
+void tpl_list_deinit(
+	UDF_INIT *initid
+){
+    free(initid->ptr);
+}
+
+char* tpl_list(
+	UDF_INIT *initid
+,	UDF_ARGS *args
+,	char* result
+,	unsigned long* length
+,	char *is_null
+,	char *error
+){
+    DIR *dp;
+    struct dirent *ent;
+    unsigned long len, outlen;
+    outlen = 0;
+    char *dir = calloc(args->lengths[0] + 1, sizeof(char));
+    if(!dir){
+        strcpy(error, "failed to allocate memory");
+        return NULL;
+    };
+    strncpy(dir, args->args[0], args->lengths[0]);
+    
+    dp = opendir(dir);
+    if(dp){
+        while((ent = readdir(dp))){
+            if(ent->d_name[0] == '.') continue;
+            len = strlen(ent->d_name);
+            if(strcmp(&ent->d_name[len - 4], ".tpl") == 0){
+                outlen += strlen(ent->d_name);
+            };
+        };
+        closedir(dp);
+        result = calloc(outlen + 1, sizeof(char));
+        dp = opendir(dir);
+        while((ent = readdir(dp))){
+            if(ent->d_name[0] == '.') continue;
+            len = strlen(ent->d_name);
+            if(strcmp(&ent->d_name[len - 4], ".tpl") == 0){
+                ent->d_name[len - 4] = '\n';
+                ent->d_name[len - 3] = '\0';
+                strcat(result, ent->d_name);
+                strcat(result, "\n");
+            };
+        };
+        closedir(dp);
+    }else{
+        strcpy(error, "Could not open directory");
+        return NULL;
+    };
+
+	if (!(*result) || result == NULL) {
+		*is_null = 1;
+	} else {
+		*length = strlen(result);
+	}
+
+	return result;
+}
+
+
 
 
 #endif /* HAVE_DLOPEN */

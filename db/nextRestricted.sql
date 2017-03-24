@@ -256,7 +256,34 @@ BEGIN
     RETURN list;
 END $$
 
+DROP FUNCTION IF EXISTS `refreshPages` $$
+CREATE FUNCTION `refreshPages`() RETURNS TEXT
+MODIFIES SQL DATA
+BEGIN
+    DECLARE pageList TEXT DEFAULT '';
+    DECLARE pageTpl VARCHAR(1024) DEFAULT '';
+    DECLARE chk INT DEFAULT 0;
+    
+    SET pageList = tpl_list(CONCAT(`getConfig`('Site','tplroot'),'/public/pages'));
+    IF pageList IS NULL OR pageList = '' THEN
+        RETURN CONCAT(`getConfig`('Site','tplroot'),'/public/pages is empty!');
+    END IF;
 
+    UPDATE `pages` SET `published` = 0 WHERE `published` = -1;
+    UPDATE `pages` SET `published` = -1
+        WHERE LOCATE(CONCAT('\n',`tpl`,'\n'), CONCAT('\n', pageList)) < 1;
+            
+    WHILE LOCATE('\n', pageList) > 0 DO
+        SET pageTpl = SUBSTR( pageList, 1, LOCATE('\n', pageList) - 1 );
+        SELECT COUNT(`tpl`) INTO chk FROM `pages` WHERE `tpl` = pageTpl;
+        IF chk < 1 AND pageTpl != '' THEN
+            INSERT INTO `pages` (`tpl`) VALUES (pageTpl);
+        END IF;
+        SET pageList = SUBSTR( pageList, LOCATE('\n', pageList) + 1 );
+    END WHILE;
+    
+    RETURN '';
+END $$
 
 DROP PROCEDURE IF EXISTS `nextArticle` $$
 CREATE PROCEDURE `nextArticle` (articleId BIGINT)
@@ -279,7 +306,7 @@ BEGIN
     IF @mobile != 'Y' THEN
         SET @mvp_template = CONCAT('pages/',`getConfig`('Site','articleLayout'));
     ELSE
-        SET @mvp_template = CONCAT('pages/',`getConfig`('Site','articleLayout'),'_mobile');
+        SET @mvp_template = CONCAT('pages/',`getConfig`('Site','articleLayoutMobile'));
     END IF;
 END $$
 
@@ -357,112 +384,21 @@ BEGIN
     END IF;
 END $$
 
-DROP FUNCTION IF EXISTS `categoriesHtml` $$
-CREATE FUNCTION `categoriesHtml` () RETURNS TEXT
+DROP FUNCTION IF EXISTS `catIndent` $$
+CREATE FUNCTION `catIndent`(parentId BIGINT) RETURNS TEXT
 READS SQL DATA
 BEGIN
-    DECLARE done, pos, deep INT DEFAULT 0;
-    DECLARE cid, pid, parentId, prevCatId BIGINT DEFAULT 0;
-    DECLARE curi, cname VARCHAR(1024);
-    DECLARE listHtml TEXT DEFAULT '<ol class="dd-list" id="parent1">';
-    DECLARE queue TEXT DEFAULT '1|';
-    DECLARE cursr CURSOR FOR SELECT `id`, `idParent`, `uri`, `displayName` 
-        FROM `categories` WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-    SET parentId = 1;
-    OPEN cursr;
-    REPEAT
-        FETCH cursr INTO cid, pid, curi, cname;
-        IF NOT done THEN
-            IF prevCatId > 0 AND pid = parentId THEN
-                SET listHtml = CONCAT(listHtml, '</li>');
-            END IF;
-            IF pid != parentId THEN
-                IF pid = prevCatId THEN
-                    SET deep = deep + 1;
-                    SET listHtml = CONCAT(listHtml, '<ol class="dd-list" id="parent', pid, '">');
-                    SET queue = CONCAT(pid, '|', queue);
-                    SET parentId = pid;
-                ELSE
-                    WHILE parentId != pid DO
-                        SET deep = deep - 1;
-                        SET listHtml = CONCAT(listHtml, '</ol></li>');
-                        SET queue = SUBSTR(queue, LOCATE('|', queue) + 1);
-                        SET pos = LOCATE('|', queue);
-                        SET parentId = SUBSTR(queue, 1, pos - 1);
-                    END WHILE;
-                END IF;
-            END IF;
-            SET listHtml = CONCAT(listHtml,'<li class="dd-item" data-id="',cid,
-                                  '"><div id="',cid,'" class="dd-handle" data-uri="',curi,
-                                  '" onmousedown="editCategory(this);">',cname,'</div>');
-            SET prevCatId = cid;
-        END IF;
-    UNTIL done END REPEAT;
-    CLOSE cursr;
-    WHILE deep > -1 DO
-        SET deep = deep - 1;
-        SET listHtml = CONCAT(listHtml,'</li></ol>');
+    DECLARE indent TEXT DEFAULT '';
+    WHILE parentId > 1 DO
+        SET indent = CONCAT(indent, '&nbsp;&nbsp;');
+        SELECT `idParent` INTO parentId FROM `categories` 
+            WHERE `id` = parentId LIMIT 1;
     END WHILE;
-    RETURN listHtml;
+    RETURN indent;
 END $$
 
-DROP FUNCTION IF EXISTS `categorySelector` $$
-CREATE FUNCTION `categorySelector` (articleId BIGINT) RETURNS TEXT
-READS SQL DATA
-BEGIN
-    DECLARE done, pos, deep, pub INT DEFAULT 0;
-    DECLARE cid, pid, parentId, prevCatId, catSelected BIGINT DEFAULT 0;
-    DECLARE curi, cname, indent VARCHAR(1024) DEFAULT '';
-    DECLARE listHtml TEXT DEFAULT '<select name="catId"><option>Select a Category</option>';
-    DECLARE queue TEXT DEFAULT '1|';
-    DECLARE cursr CURSOR FOR SELECT `id`, `idParent`, `categories`.`uri`, `displayName`, `pages`.`published`
-        FROM `categories` LEFT JOIN `pages` ON `categories`.`uri` = `pages`.`uri`
-        WHERE `id` > 1 AND `ord` > 0 ORDER BY `ord`;
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-
-    SELECT `idCategory` INTO catSelected FROM `articles` WHERE `id` = articleId;
-    SET parentId = 1;
-    OPEN cursr;
-    REPEAT
-        FETCH cursr INTO cid, pid, curi, cname, pub;
-        IF NOT done THEN
-            IF pid != parentId THEN
-                IF pid = prevCatId THEN
-                    SET deep = deep + 1;
-                    SET indent = REPEAT('&nbsp;&nbsp;', deep);
-                    SET queue = CONCAT(pid, '|', queue);
-                    SET parentId = pid;
-                ELSE
-                    WHILE parentId != pid DO
-                        SET deep = deep - 1;
-                        SET indent = REPEAT('&nbsp;&nbsp;', deep);
-                        SET queue = SUBSTR(queue, LOCATE('|', queue) + 1);
-                        SET pos = LOCATE('|', queue);
-                        SET parentId = SUBSTR(queue, 1, pos - 1);
-                    END WHILE;
-                END IF;
-            END IF;
-            IF pub IS NULL OR pub = 0 THEN
-                IF cid = catSelected THEN
-                    SET listHtml = CONCAT(listHtml,'<option value="',cid,
-                                          '" selected="selected">',
-                                          indent,REPLACE(cname,'"',''),'</option>');
-                ELSE
-                    SET listHtml = CONCAT(listHtml,'<option value="',cid,
-                                          '">',indent,REPLACE(cname,'"',''),'</option>');
-                END IF;
-            END IF;
-            SET prevCatId = cid;
-        END IF;
-    UNTIL done END REPEAT;
-    CLOSE cursr;
-    SET listHtml = CONCAT(listHtml,'</select>');
-    RETURN listHtml;
-END $$
-
-DROP FUNCTION IF EXISTS `publicCategories` $$
-CREATE FUNCTION `publicCategories` () RETURNS TEXT
+DROP FUNCTION IF EXISTS `publicCategoriesHtml` $$
+CREATE FUNCTION `publicCategoriesHtml` () RETURNS TEXT
 READS SQL DATA
 BEGIN
     DECLARE done, pos, deep INT DEFAULT 0;
@@ -601,82 +537,6 @@ END $$
 DROP FUNCTION IF EXISTS `notifyNewArticle` $$
 CREATE FUNCTION `notifyNewArticle` (articleId BIGINT) RETURNS INT
 READS SQL DATA
-BEGIN
-    RETURN 1;
-END $$
-
-DROP FUNCTION IF EXISTS `applyBlacklist` $$
-CREATE FUNCTION `applyBlacklist` (ctext TEXT, tlist TEXT) RETURNS INT
-NO SQL
-BEGIN
-    DECLARE term TEXT DEFAULT '';
-    DECLARE pos INT DEFAULT 1;
-    WHILE LENGTH(tlist) DO
-        SET pos = LOCATE(',', tlist);
-        IF pos > 0 THEN
-            SET term = SUBSTR(tlist, 1, pos - 1);
-            SET tlist = SUBSTR(tlist, pos + 1);
-        ELSE
-            SET term = tlist;
-            SET tlist = '';
-        END IF;
-        IF LOCATE(TRIM(term), ctext) > 0 THEN
-            RETURN 1; -- match!
-        END IF;
-    END WHILE;
-    RETURN 0; -- no matches
-END $$
-
-DROP FUNCTION IF EXISTS `linkFilter` $$
-CREATE FUNCTION `linkFilter` (ctext TEXT, numAllow INT) RETURNS INT
-NO SQL
-BEGIN
-    DECLARE pos, len, numAllow, numCounted INT DEFAULT 0;
-    SET len = LENGTH(ctext);
-    WHILE pos < len DO
-        SET pos = LOCATE('<', ctext, pos);
-        IF pos = 0 THEN
-            SET pos = len;
-        ELSE
-            IF LOCATE('a ',TRIM(LOWER(SUBSTR(ctext, pos)))) = 1 THEN
-                SET numCounted = numCounted + 1;
-            END IF;
-        END IF;
-        SET pos = pos + 1;
-    END WHILE;
-    IF numCounted > numAllow THEN
-        RETURN 0; -- too many links, held
-    END IF;
-    RETURN 1;
-END $$
-
-DROP FUNCTION IF EXISTS `teaseComment` $$
-CREATE FUNCTION `teaseComment`(cmt TEXT) RETURNS VARCHAR(140)
-NO SQL
-BEGIN
-    DECLARE outStr TEXT DEFAULT '';
-    DECLARE pos, pos2, len INT DEFAULT 1;
-    SET cmt = REPLACE(cmt, '&nbsp;', ' ');
-    SET len = LENGTH(cmt);
-    WHILE len > pos DO
-        SET pos2 = LOCATE('<', cmt, pos);
-        IF pos2 > 0 THEN
-            SET outStr = CONCAT(outStr, SUBSTR(cmt, pos, pos2 - pos));
-            SET pos = LOCATE('>', cmt, pos2) + 1;
-        ELSE
-            SET outStr = CONCAT(outStr, SUBSTR(cmt, pos));
-            SET pos = len;
-        END IF;
-    END WHILE;
-    IF LENGTH(outStr) > 140 THEN
-        SET outStr = CONCAT(SUBSTR(outStr, 1, 137),'...');
-    END IF;
-    RETURN outStr;
-END $$
-
-DROP FUNCTION IF EXISTS `commentNotifications` $$
-CREATE FUNCTION `commentNotifications` (commentId BIGINT) RETURNS INT
-MODIFIES SQL DATA
 BEGIN
     RETURN 1;
 END $$
