@@ -792,8 +792,6 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
         SET parseText = SUBSTR(parseText, LOCATE('</wp:tag>', parseText) + 9);
     END WHILE;
     
-    SELECT `id` INTO rid FROM `roles` WHERE `label` = 'Commenter' LIMIT 1;
-    
     SET parseText = xml;
     WHILE LOCATE('</item>', parseText) > 0 DO
         SET itemXML = SUBSTR(parseText, 1, LOCATE('</item>', parseText));

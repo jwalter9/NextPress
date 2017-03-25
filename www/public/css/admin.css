@@ -17,7 +17,7 @@ tr:nth-child(even) { background-color: #EEEEEE; }
 #cat-edit { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: fixed; top: 60px; right: 0px; }
 #tpl-edit { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: absolute; top: 60px; right: 0px; width: 20%; }
 #page-table { float: left; margin-left: 20px; width: 70%; overflow: scroll; }
-#tplLabel { font-size: 20px; font-weight: bold; text-decoration: italic; }
+#tplLabel { font-weight: bold; }
 #new-tag { float: right; margin-right: 40px; padding-left: 0px; padding-right: 50px; position: fixed; top: 60px; right: 0px; }
 #nestable { margin: auto; padding-top: 50px; }
 #footer { position: fixed; bottom: 0; width: 100%; font-size: 12px; font-weight: bold; color: #333333; padding-bottom: 5px; }

@@ -109,39 +109,10 @@ END $$
 -- Procedures for DropIns
 
 DROP PROCEDURE IF EXISTS `Archives` $$
-CREATE PROCEDURE `Archives`(OUT htmlArchive TEXT)
+CREATE PROCEDURE `Archives`()
 BEGIN
-    DECLARE artId, yr, curYr, done BIGINT DEFAULT 0;
-    DECLARE mnth, curMnth VARCHAR(10) DEFAULT '';
-    DECLARE ttl VARCHAR(256);
-    DECLARE uri VARCHAR(1024);
-    DECLARE cursr CURSOR FOR SELECT `id`, `uri`, `title`, 
-            YEAR(`dtPublish`), MONTHNAME(`dtPublish`) 
-        FROM `nextData`.`articles`
-        WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-    SET htmlArchive = '<ul>\n';
-    OPEN cursr;
-    REPEAT
-        FETCH cursr INTO artId, uri, ttl, yr, mnth;
-        IF NOT done THEN
-            IF curYr != yr THEN
-                SET htmlArchive = CONCAT(htmlArchive, 
-                    '<li class="arch-year">', yr, '</li>\n');
-                SET curYr = yr;
-                SET curMnth = '';
-            END IF;
-            IF curMnth != mnth THEN
-                SET htmlArchive = CONCAT(htmlArchive, 
-                    '<li class="arch-month">', mnth, '</li>\n');
-                SET curMnth = mnth;
-            END IF;
-            SET htmlArchive = CONCAT(htmlArchive, 
-                '<li class="arch-article"><a href="/',uri,'">',ttl,'</a></li>\n');
-        END IF;
-    UNTIL done END REPEAT;
-    CLOSE cursr;
-    SET htmlArchive = CONCAT(htmlArchive, '</ul>');
+    SELECT `uri`, `title`, YEAR(`dtPublish`) AS yr, MONTHNAME(`dtPublish`) AS mnth 
+    FROM `nextData`.`articles` WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
 END $$
 
 DROP PROCEDURE IF EXISTS `Disqus` $$
