@@ -1,6 +1,6 @@
 body { margin: 0px auto; padding: 0px; }
-li { list-style: none; padding: 0px; }
-
+li { list-style: none; }
+p.centered { margin: 0px auto; padding: 0px; }
 
 /* Archives.tpl */
 #archive-div { background-color: #EEEEEE; width: 200px; overflow: scroll; }
