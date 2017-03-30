@@ -208,7 +208,6 @@ function saveCategories(){
 }
 
 $(document).ready(function() {
-	
 	tinymce.init({
 		selector: "textarea#articleeditor",
 		file_picker_types: 'file image',
@@ -237,16 +236,6 @@ $(document).ready(function() {
             });
 		},
 		theme: "modern",
-		setup: function (editor) {
-		    var aid = document.getElementById('articleId').value;
-		    editor.addButton('tags', {
-		            text: 'Article Tags',
-		            icon: false,
-		            onclick: function () {
-		                window.open('/ArticleTags?articleId='+aid,'_blank');
-		            }
-		    });
-		},
 		plugins: [
 	        	"advlist autolink lists link image charmap print preview hr anchor pagebreak",
 	        	"searchreplace wordcount visualblocks visualchars code fullscreen",
@@ -255,8 +244,7 @@ $(document).ready(function() {
 	        ],
 	        toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link media | browsemedia | tags",
 	        content_css: "/css/admin.css",
-	        width: $(document).width,
-	        height: 700
+	        height: 450
         });
 });
 

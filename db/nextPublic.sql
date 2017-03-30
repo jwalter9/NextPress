@@ -96,6 +96,8 @@ BEGIN
                 WHERE `uri` = defaultUri AND `dtPublish` IS NOT NULL LIMIT 1;
             IF articleId > 0 THEN
                 CALL `nextData`.`nextArticle`(articleId);
+            ELSEIF @mvp_uri = '' THEN
+                CALL `nextData`.`nextCategory`(1);
             ELSE
                 SET @mvp_template = CONCAT('pages/', `nextData`.`getConfig`('Site','404Page'));
             END IF;

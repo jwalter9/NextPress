@@ -1,5 +1,5 @@
-<p class="centered"><img src="/media/NextPress_logo.png" /></p>
-<p class="centered"><# INCLUDE dropins/MainMenu #></p>
-<p class="centered"><# INCLUDE dropins/ArticleContent #></p>
-<p class="centered"><# INCLUDE dropins/RelatedArticles #></p>
+<img src="/media/NextPress_logo.png" /><br />
+<# INCLUDE dropins/MainMenu #><br />
+<# INCLUDE dropins/ArticleContent #><br />
+<# INCLUDE dropins/RelatedArticles #><br />
 

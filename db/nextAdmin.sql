@@ -57,33 +57,98 @@ BEGIN
     SET @mvp_template = 'Login';
 END $$
 
-DROP PROCEDURE IF EXISTS `Register` $$
-CREATE PROCEDURE `Register`(IN addr VARCHAR(256))
+DROP PROCEDURE IF EXISTS `ForgotPassword` $$
+CREATE PROCEDURE `ForgotPassword` (IN eaddr VARCHAR(256))
 BEGIN
-    DECLARE idUsr, retVal INT DEFAULT 0;
+    DECLARE idUsr, retVal BIGINT DEFAULT 0;
     DECLARE vhash VARCHAR(32);
+    DECLARE ebody TEXT DEFAULT '';
     SELECT `id` INTO idUsr FROM `nextData`.`users`
-        WHERE `email` = addr LIMIT 1;
-    IF idUsr > 0 THEN
-        SET @err = CONCAT('The email address ',addr,' is already linked to an account.');
-        SET @mvp_template = 'Login';
+        WHERE `email` = eaddr LIMIT 1;
+    IF idUsr = 0 THEN
+        SET @err = CONCAT('The email address ',eaddr,' is not linked to an account.');
     ELSE
-        IF is_email(addr) = 0 THEN
-            SET vhash = MD5(CONCAT(@mvp_remoteip, RAND()));
-            INSERT INTO `nextData`.`users` (`email`, `verifyCode`)
-                VALUES (addr, vhash);
-            SET idUsr = LAST_INSERT_ID();
-            SET retVal = `nextData`.`sendmail`(addr, 0, vhash, 'register');
+        SET vhash = MD5(CONCAT(@mvp_remoteip, RAND()));
+        SET ebody = LOAD_FILE(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
+                '/admin/email/ForgotPassword.tpl'));
+        IF ebody != '' THEN
+            SET ebody = REPLACE(ebody, '<# RECIPIENT #>', eaddr);
+            SET ebody = REPLACE(ebody, '<# FROM #>', 
+                `nextData`.`getConfig`('Site','fromEmail'));
+            SET ebody = REPLACE(ebody, '<# VHASH #>', vhash);
+            SET ebody = REPLACE(ebody, '<# DOMAIN #>', 
+                `nextData`.`getHost`(@mvp_headers));
+            SET retVal = emailer(eaddr, ebody, 
+                `nextData`.`getConfig`('Site','mailServer'), 
+                `nextData`.`getConfig`('Site','fromEmail'));
             IF retVal != 0 THEN
-                SET @err = CONCAT('Problem sending email (', retVal, ')');
-                DELETE FROM `nextData`.`users` WHERE `id` = idUsr;
-                SET @mvp_template = 'Login';
-            END IF;
+                SET @err = 'Problem sending password reset email.';
+    			INSERT INTO `nextData`.`mail_errors` (`theDate`,`errors`) 
+    			    VALUES (NOW(), CONCAT('Error ',retVal,' for addr ',eaddr));
+    		ELSE
+                SET @err = 'Password reset email has been sent.';
+    		    UPDATE `nextData`.`users` SET `verifyCode` = vhash WHERE `id` = idUsr;
+    		END IF;
         ELSE
-            SET @err = CONCAT('The email address ',addr,' did not pass validation test.');
-            SET @mvp_template = 'Login';
+            INSERT INTO `nextData`.`mail_errors` (`theDate`,`errors`) 
+                VALUES (NOW(), 'ForgotPassword template appears to be missing or empty.');
+            SET @err = CONCAT('Problem sending email (missing template)');
         END IF;
     END IF;
+    SET @mvp_template = 'Login';
+END $$
+
+DROP PROCEDURE IF EXISTS `Register` $$
+CREATE PROCEDURE `Register`(IN eaddr VARCHAR(256))
+BEGIN
+    DECLARE idUsr, retVal, subscriberRoleId BIGINT DEFAULT 0;
+    DECLARE vhash VARCHAR(32);
+    DECLARE ebody TEXT DEFAULT '';
+    SELECT `id` INTO idUsr FROM `nextData`.`users`
+        WHERE `email` = eaddr LIMIT 1;
+    IF idUsr > 0 THEN
+        SET @err = CONCAT('The email address ',eaddr,' is already linked to an account.');
+    ELSE
+        IF is_email(eaddr) = 0 THEN
+            SET vhash = MD5(CONCAT(@mvp_remoteip, RAND()));
+            INSERT INTO `nextData`.`users` (`email`, `verifyCode`)
+                VALUES (eaddr, vhash);
+            SET idUsr = LAST_INSERT_ID();
+            SET ebody = LOAD_FILE(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
+                '/admin/email/Register.tpl'));
+            IF ebody != '' THEN
+                SET ebody = REPLACE(ebody, '<# RECIPIENT #>', eaddr);
+                SET ebody = REPLACE(ebody, '<# FROM #>', 
+                    `nextData`.`getConfig`('Site','fromEmail'));
+                SET ebody = REPLACE(ebody, '<# VHASH #>', vhash);
+                SET ebody = REPLACE(ebody, '<# DOMAIN #>', 
+                    `nextData`.`getHost`(@mvp_headers));
+                SET retVal = emailer(eaddr, ebody, 
+                    `nextData`.`getConfig`('Site','mailServer'), 
+                    `nextData`.`getConfig`('Site','fromEmail'));
+                IF retVal != 0 THEN
+                    SET @err = 'Problem sending registration email.';
+        			INSERT INTO `nextData`.`mail_errors` (`theDate`,`errors`) 
+        			    VALUES (NOW(), CONCAT('Error ',retVal,' for addr ',eaddr));
+        			DELETE FROM `nextData`.`users` WHERE `id` = idUsr;
+        		ELSE
+        		    SELECT `id` INTO subscriberRoleId FROM `nextData`.`roles`
+        		        WHERE `label` = 'Subscriber' LIMIT 1;
+        		    INSERT INTO `nextData`.`user_roles`(`idUser`,`idRole`)
+        		        VALUES (idUsr, subscriberRoleId);
+                    SET @err = 'Registration email has been sent.';
+        		END IF;
+            ELSE
+                INSERT INTO `nextData`.`mail_errors` (`theDate`,`errors`) 
+                    VALUES (NOW(), 'Registration template appears to be missing or empty.');
+                SET @err = 'Problem sending email (missing template)';
+                DELETE FROM `nextData`.`users` WHERE `id` = idUsr;
+            END IF;
+        ELSE
+            SET @err = CONCAT('The email address ',eaddr,' did not pass validation test.');
+        END IF;
+    END IF;
+    SET @mvp_template = 'Login';
 END $$
 
 DROP PROCEDURE IF EXISTS `Verify` $$
@@ -573,7 +638,8 @@ BEGIN
                     WHERE `id` = articleId;
             END IF;
             IF pubDate IS NULL AND chk = 0 THEN
-                SET notificationsSent = `nextData`.`notifyNewArticle`(articleId);
+                SET notificationsSent = 
+                    `nextData`.`notifyNewArticle`(articleId, `nextData`.`getHost`(@mvp_headers));
             END IF;
         ELSE
             UPDATE `nextData`.`articles` SET `dtPublish` = NULL WHERE `id` = articleId;
@@ -584,7 +650,7 @@ BEGIN
 END $$
 
 DROP PROCEDURE IF EXISTS `ArticleTags` $$
-CREATE PROCEDURE `ArticleTags` (INOUT articleId BIGINT, OUT artTitle VARCHAR(256))
+CREATE PROCEDURE `ArticleTags` (INOUT articleId BIGINT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
@@ -602,7 +668,7 @@ BEGIN
             ON `tags`.`id` = `article_tags`.`idTag` 
             AND `article_tags`.`idArticle` = articleId
         ORDER BY `tags`.`displayName` ASC;
-        SELECT `title` INTO artTitle FROM `nextData`.`articles` WHERE `id` = articleId;
+        SET @mvp_layout = 'popup';
     ELSE
         SET @err = 'Please log in with Editor or Author access.';
         SET @mvp_template = 'Login';
@@ -637,7 +703,7 @@ END $$
 
 DROP PROCEDURE IF EXISTS `NewTag` $$
 CREATE PROCEDURE `NewTag` (INOUT articleId BIGINT, IN tagName VARCHAR(1024), 
-                           IN tagUri VARCHAR(1024), OUT artTitle VARCHAR(256))
+                           IN tagUri VARCHAR(1024))
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Editor');
@@ -655,7 +721,7 @@ BEGIN
         SET chk = LAST_INSERT_ID();
         INSERT INTO `nextData`.`article_tags` (`idTag`,`idArticle`)
             VALUES (chk, articleId);
-        CALL `ArticleTags`(articleId, artTitle);
+        CALL `ArticleTags`(articleId);
         SET @mvp_template = 'ArticleTags';
     ELSE
         SET @err = 'Please log in with Editor or Author access.';

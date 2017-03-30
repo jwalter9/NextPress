@@ -502,7 +502,7 @@ DROP FUNCTION IF EXISTS `resetArticleCategories` $$
 CREATE FUNCTION `resetArticleCategories`(articleId BIGINT) RETURNS TINYINT
 MODIFIES SQL DATA
 BEGIN
-    DECLARE catLineage, articleId, catId, done BIGINT DEFAULT 0;
+    DECLARE catLineage, catId, done BIGINT DEFAULT 0;
     DECLARE cursr CURSOR FOR SELECT `id`, `idCategory` FROM `articles`;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     IF articleId IS NULL THEN
@@ -510,6 +510,7 @@ BEGIN
         REPEAT
             FETCH cursr INTO articleId, catId;
             IF NOT done THEN
+                DELETE FROM `article_categories` WHERE `idArticle` = articleId;
                 SET catLineage = catId;
                 WHILE catLineage > 1 DO
                     INSERT INTO `article_categories` (`idArticle`,`idCategory`)
@@ -517,11 +518,13 @@ BEGIN
                     SELECT `idParent` INTO catLineage FROM `categories`
                         WHERE `id` = catLineage;
                 END WHILE;
+                INSERT INTO `article_categories` (`idArticle`,`idCategory`)
+                    VALUES (articleId, 1);
             END IF;
         UNTIL done END REPEAT;
         CLOSE cursr;
     ELSE
-        DELETE FROM `nextData`.`article_categories` WHERE `idArticle` = articleId;
+        DELETE FROM `article_categories` WHERE `idArticle` = articleId;
         SELECT `idCategory` INTO catId FROM `articles` WHERE `id` = articleId;
         SET catLineage = catId;
         WHILE catLineage > 1 DO
@@ -530,15 +533,72 @@ BEGIN
             SELECT `idParent` INTO catLineage FROM `categories`
                 WHERE `id` = catLineage;
         END WHILE;
+        INSERT INTO `article_categories` (`idArticle`,`idCategory`)
+            VALUES (articleId, 1);
     END IF;
     RETURN 1;
 END $$
 
 DROP FUNCTION IF EXISTS `notifyNewArticle` $$
-CREATE FUNCTION `notifyNewArticle` (articleId BIGINT) RETURNS INT
+CREATE FUNCTION `notifyNewArticle` (articleId BIGINT, host TEXT) RETURNS INT
 READS SQL DATA
 BEGIN
-    RETURN 1;
+    DECLARE titl, teasr VARCHAR(256) DEFAULT '';
+    DECLARE authorName, url, eaddr, recipName, fromEmail, mailServer VARCHAR(1024) DEFAULT '';
+    DECLARE ebody, sendBody, errs TEXT DEFAULT '';
+    DECLARE done, numSent, errChk INT DEFAULT 0;
+    DECLARE cursr CURSOR FOR SELECT `email`, `displayName` FROM `users`
+        WHERE `notifyArticles` > 0 AND `prohibited` = 0;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    SET fromEmail = `getConfig`('Site','fromEmail');
+    SET mailServer = `getConfig`('Site','mailServer');
+    SELECT `title`, `teaser`, CONCAT('http://', host, '/', `uri`),
+        `displayName` INTO titl, teasr, url, authorName
+        FROM `articles` LEFT JOIN `users` ON `articles`.`idAuthor` = `users`.`id`
+        WHERE `articles`.`id` = articleId AND `dtPublish` IS NOT NULL LIMIT 1;
+    IF titl != '' AND teasr != '' THEN
+        SET ebody = LOAD_FILE(CONCAT(`getConfig`('Site','tplroot'),'/admin/email/NewArticle.tpl'));
+        IF ebody != '' THEN
+            SET ebody = REPLACE(ebody, '<# TITLE #>', titl);
+            SET ebody = REPLACE(ebody, '<# TEASER #>', teasr);
+            SET ebody = REPLACE(ebody, '<# URL #>', url);
+            SET ebody = REPLACE(ebody, '<# AUTHOR #>', authorName);
+            SET ebody = REPLACE(ebody, '<# DOMAIN #>', host);
+            SET ebody = REPLACE(ebody, '<# FROM #>', fromEmail);
+        ELSE
+            INSERT INTO `mail_errors` (`theDate`,`errors`) 
+                VALUES (NOW(), 'Notification template appears to be missing or empty.');
+            RETURN 0;
+        END IF;
+        OPEN cursr;
+        REPEAT
+            FETCH cursr INTO eaddr, recipName;
+            IF NOT done THEN
+                IF recipName = '' THEN
+                    SET recipName = CONCAT('<',eaddr,'>');
+                ELSE
+                    SET recipName = CONCAT('"',recipName,'" <',eaddr,'>');
+                END IF;
+                SET sendBody = REPLACE(ebody, '<# RECIPIENT #>', recipName);
+                SET errChk = emailer(eaddr, sendBody, mailServer, fromEmail);
+                IF errChk != 0 THEN
+        			SET errs = CONCAT(errs, 'Error ',errChk,' for addr ',eaddr,'<br />');
+                ELSE
+                    SET numSent = numSent + 1;
+                END IF;
+            END IF;
+        UNTIL done END REPEAT;
+        CLOSE cursr;
+        IF errs != '' THEN
+            INSERT INTO `mail_errors` (`theDate`,`errors`) VALUES (NOW(), errs);
+        END IF;
+    ELSE
+        INSERT INTO `mail_errors` (`theDate`,`errors`) 
+            VALUES (NOW(), 'The published article seems to have no title or content.');
+        RETURN 0;
+    END IF;
+    RETURN numSent;
 END $$
 
 DELIMITER ;

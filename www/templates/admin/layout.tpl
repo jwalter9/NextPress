@@ -30,7 +30,7 @@
 
 <div id="footer">
     <ul>
-        <li><a href="terms.html" target="_blank">Terms of Use</a></li>
+        <li><a href="license.html" target="_blank">License</a></li>
         <li>&copy;2017 <a href="http://lowadobe.com" target="_blank">Lowadobe Web Services, LLC</a></li>
         <li><a href="http://nextpress.org" target="_blank">NextPress.org</a></li>
     </ul>

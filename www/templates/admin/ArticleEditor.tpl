@@ -27,8 +27,10 @@
         </ul>
     </div>
     <div class="spacer"></div>
-    <div id="page-editor">
+    <div id="editor">
         <textarea id="articleeditor" name="contentin"><# articles.content #></textarea>
     </div>
 </form>
+<iframe id="tagdiv" src="/ArticleTags?articleId=<# articles.id #>" />
+
 
