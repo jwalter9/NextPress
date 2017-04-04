@@ -2,7 +2,7 @@
   /tmp/** r,
   /var/nextpress/** r,
   /var/nextpress/public/media/** rw,
-  /bin/chmod ixr,
-  /bin/cp ixr,
-  /usr/bin/convert ixr,
+  /bin/chmod mixr,
+  /bin/cp mixr,
+  /usr/bin/convert mixr,
 

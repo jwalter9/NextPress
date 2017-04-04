@@ -11,7 +11,8 @@
 	<script src="/js/admin.js"></script>
 </head>
 <body>
-	<# TEMPLATE #>
+<# IF err #><span class="err"><# err #></span><br /><# ENDIF #>
+<# TEMPLATE #>
 </body>
 </html>
 

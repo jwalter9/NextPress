@@ -210,30 +210,19 @@ function saveCategories(){
 $(document).ready(function() {
 	tinymce.init({
 		selector: "textarea#articleeditor",
-		file_picker_types: 'file image',
-		file_picker_callback: function(cb, value, meta) {
-		    var input = document.createElement('input');
-		    input.setAttribute('type', 'file');
-		    input.onchange = function() {
-		        var file = this.files[0];
-		        var id = 'blobid' + (new Date()).getTime();
-		        var blobCache = tinymce.activeEditor.editorUpload.blobCache;
-		        var blobInfo = blobCache.create(id, file);
-		        blobCache.add(blobInfo);
-		        cb(blobInfo.blobUri(), { title: file.name });
-		    };
-		    input.click();
-		},
-		images_upload_handler: function (blobInfo, success, failure) {
-		    $.ajax({
-                url: "/addMedia",
-                data: { upload: blobInfo.blob(), fname: blobInfo.filename() },
-                dataType: "json",
-                cache: false
-            }).done(function( data ) {
-                if( data.PROC_OUT[0].err != '' ) failure(data.PROC_OUT[0].err);
-                else success(data.media[0].uri);
-            });
+		setup: function (editor) {
+		    editor.addButton('addmedia', {
+		            text: 'Insert Image',
+		            icon: false,
+		            onclick: function () {
+		                editor.windowManager.open({
+		                        title: 'Insert Image',
+		                        url: '/addMedia',
+		                        width: 400,
+		                        height: 100
+		                });
+		            }
+		    });
 		},
 		theme: "modern",
 		plugins: [
@@ -242,7 +231,7 @@ $(document).ready(function() {
 	        	"insertdatetime media nonbreaking save table contextmenu directionality",
 	        	"emoticons template paste textcolor colorpicker textpattern imagetools"
 	        ],
-	        toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link media | browsemedia | tags",
+	        toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link media | addmedia",
 	        content_css: "/css/admin.css",
 	        height: 450
         });

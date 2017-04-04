@@ -24,6 +24,7 @@ tr:nth-child(even) { background-color: #EEEEEE; }
 #footer { position: fixed; bottom: 0; width: 100%; font-size: 12px; font-weight: bold; color: #333333; padding-bottom: 5px; }
 #footer li { float: right; padding: 5px 10px 5px 10px; background-color: #EEEEEE; }
 #footer a { text-decoration: none; color: #333333; }
+#image-upload-div { background: #EEEEEE; padding: 20px; }
 li.editor-entry { float: right; font-size: 12px; }
 li.spacer { height: 12px; width: 20px; }
 li.horiz { float: left; }

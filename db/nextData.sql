@@ -139,8 +139,8 @@ DROP TABLE IF EXISTS `categories`;
 CREATE TABLE `categories` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `idParent` bigint(20) NOT NULL DEFAULT '1',
-  `uri` varchar(1024) NOT NULL,
-  `displayName` varchar(1024) NOT NULL,
+  `uri` varchar(256) NOT NULL,
+  `displayName` varchar(256) NOT NULL,
   `ord` bigint(20) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_cat_parent` (`idParent`),
@@ -154,7 +154,7 @@ CREATE TABLE `categories` (
 
 LOCK TABLES `categories` WRITE;
 /*!40000 ALTER TABLE `categories` DISABLE KEYS */;
-INSERT INTO `categories` VALUES (1,1,'','',0);
+INSERT INTO `categories` VALUES (1,1,'--all--','',0);
 /*!40000 ALTER TABLE `categories` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -182,7 +182,7 @@ CREATE TABLE `config` (
 
 LOCK TABLES `config` WRITE;
 /*!40000 ALTER TABLE `config` DISABLE KEYS */;
-INSERT INTO `config` VALUES ('404Page','','404Page','Site','404 error page for inactive, missing pages or broken links',9),('articleLayout','','nextArticle','Site','Article Layout Page',4),('articleLayoutMobile','','nextArticle_mobile','Site','Mobile version of Article Layout Page',5),('authorSelfPublish','yesno','No','Site','Authors may publish their own articles',13),('avatarResize','','-resize \'60x60>\'','Media','Avatar conversion directive (for ImageMagick convert)',22),('date_format','','%b %D, %Y','Site','Date format',10),('default_uri','','','Site','Default uri (landing page or page not found)',3),('errorPage','','error','Site','System error page for internal errors',8),('image_formats','','|jpg|jpeg|png|gif|tiff|svg|','Media','Recognized image file extensions',23),('keywords','','','Site','Search engine keywords',12),('listLayout','','nextList','Site','Article List Layout Page',6),('listLayoutMobile','','nextList_mobile','Site','Mobile version of Article List Layout Page',7),('mediaResize','','-resize \'1024x600>\'','Media','Image conversion directive (for ImageMagick convert)',20),('mediaThumbsize','','-resize \'120x90>\'','Media','Thumbnail conversion directive (for ImageMagick convert)',21),('notifications','yesno','Yes','Site','Make notifications of new articles available',14),('registration','yesno','No','Site','Allow Guests to Register (primarily for new article notification)',15),('tagline','','A NextPress Site','Site','Site Tagline',11),('tplroot','','/var/nextpress/templates','Site','The absolute path of the template directory',2),('webroot','','/var/nextpress/public','Site','The absolute path of the web directory',1),('mainMenu','','','Site','Cached html for Main Menu - this is automatically updated when Categories are altered',16),('fromEmail','','change.me@nextpress.org','Site','From Address for site-sent emails',17),('mailServer','','localhost:25','Site','Mail Server domain:port for site-sent emails',18);
+INSERT INTO `config` VALUES ('404Page','','404Page','Site','404 error page for inactive, missing pages or broken links',9),('listLimit','','20','Site','Limit to how many articles show on the Article List page',8),('articleLayout','','nextArticle','Site','Article Layout Page',4),('articleLayoutMobile','','nextArticle_mobile','Site','Mobile version of Article Layout Page',5),('authorSelfPublish','yesno','No','Site','Authors may publish their own articles',13),('avatarResize','','-resize \'60x60>\'','Media','Avatar conversion directive (for ImageMagick convert)',22),('date_format','','%b %D, %Y','Site','Date format',10),('default_uri','','','Site','Default uri (landing page)',3),('image_formats','','|jpg|jpeg|png|gif|tiff|svg|','Media','Recognized image file extensions',23),('keywords','','','Site','Search engine keywords',12),('listLayout','','nextList','Site','Article List Layout Page',6),('listLayoutMobile','','nextList_mobile','Site','Mobile version of Article List Layout Page',7),('mediaResize','','-resize \'1024x600>\'','Media','Image conversion directive (for ImageMagick convert)',20),('mediaThumbsize','','-resize \'120x90>\'','Media','Thumbnail conversion directive (for ImageMagick convert)',21),('notifications','yesno','Yes','Site','Make notifications of new articles available',14),('registration','yesno','No','Site','Allow Guests to Register (primarily for new article notification)',15),('tplroot','','/var/nextpress/templates','Site','The absolute path of the template directory',2),('webroot','','/var/nextpress/public','Site','The absolute path of the web directory',1),('mainMenu','','','Site','Cached html for Main Menu - this is automatically updated when Categories are altered',16),('fromEmail','','change.me@nextpress.org','Site','From Address for site-sent emails',17),('mailServer','','localhost:25','Site','Mail Server domain:port for site-sent emails',18);
 /*!40000 ALTER TABLE `config` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -244,7 +244,7 @@ DROP TABLE IF EXISTS `media`;
 CREATE TABLE `media` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `idAuthor` bigint(20) NOT NULL,
-  `uri` varchar(1024) NOT NULL,
+  `uri` varchar(512) NOT NULL,
   `thumb` varchar(1024) DEFAULT NULL,
   `isImage` tinyint(4) DEFAULT NULL,
   `dtAdded` datetime DEFAULT NULL,
@@ -272,7 +272,7 @@ DROP TABLE IF EXISTS `pages`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `pages` (
   `tpl` varchar(512) NOT NULL,
-  `uri` varchar(512) NOT NULL DEFAULT '',
+  `uri` varchar(256) NOT NULL DEFAULT '',
   `mobile` tinyint(4) NOT NULL DEFAULT '0',
   `published` tinyint(4) DEFAULT '0',
   PRIMARY KEY (`tpl`)
@@ -377,8 +377,8 @@ DROP TABLE IF EXISTS `tags`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `tags` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `uri` varchar(1024) NOT NULL,
-  `displayName` varchar(1024) NOT NULL,
+  `uri` varchar(256) NOT NULL,
+  `displayName` varchar(256) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;

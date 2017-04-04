@@ -132,7 +132,7 @@ BEGIN
     END IF;
     SET ext = LOWER(uri);
     WHILE LOCATE('.', ext) > 0 DO
-        SET ext = SUBSTR(uri, LOCATE('.', ext) + 1);
+        SET ext = SUBSTR(ext, LOCATE('.', ext) + 1);
     END WHILE;
     SET ext = CONCAT('|',ext,'|');
     IF LOCATE(ext, formats) > 0 THEN
@@ -288,6 +288,7 @@ END $$
 DROP PROCEDURE IF EXISTS `nextArticle` $$
 CREATE PROCEDURE `nextArticle` (articleId BIGINT)
 BEGIN
+    DECLARE pubChk TINYINT DEFAULT 0;
     SELECT `articles`.`id`,`content`,`title`,`uri`,`numViews`, 
         published(`dtPublish`) AS pubDate,`users`.`displayName`,
         `users`.`url`,`users`.`avatarUri` 
@@ -303,10 +304,21 @@ BEGIN
         JOIN `nextData`.`article_tags` ON `tags`.`id` = `article_tags`.`idTag`
         AND `article_tags`.`idArticle` = articleId
         ORDER BY `tags`.`displayName`;
-    IF @mobile != 'Y' THEN
-        SET @mvp_template = CONCAT('pages/',`getConfig`('Site','articleLayout'));
-    ELSE
-        SET @mvp_template = CONCAT('pages/',`getConfig`('Site','articleLayoutMobile'));
+    IF @mobile = 'Y' THEN
+        SELECT `published` INTO pubChk FROM `pages` 
+            WHERE `tpl` = `getConfig`('Site','articleLayoutMobile');
+        IF pubChk = 1 THEN
+            SET @mvp_template = CONCAT('pages/',`getConfig`('Site','articleLayoutMobile'));
+        END IF;
+    END IF;
+    IF pubChk = 0 THEN
+        SELECT `published` INTO pubChk FROM `pages` 
+            WHERE `tpl` = `getConfig`('Site','articleLayout');
+        IF pubChk = 1 THEN
+            SET @mvp_template = CONCAT('pages/',`getConfig`('Site','articleLayout'));
+        ELSE
+            SET @mvp_template = CONCAT('pages/',`getConfig`('Site','404Page'));
+        END IF;
     END IF;
 END $$
 
@@ -314,6 +326,8 @@ DROP PROCEDURE IF EXISTS `nextCategory` $$
 CREATE PROCEDURE `nextCategory` (categoryId BIGINT)
 BEGIN
     DECLARE num, articleId BIGINT DEFAULT 0;
+    DECLARE listLimit INT DEFAULT 0;
+    DECLARE pubChk TINYINT DEFAULT 0;
     SELECT COUNT(`articles`.`id`) INTO num 
         FROM `articles` 
         JOIN `article_categories` ON `articles`.`id` = `article_categories`.`idArticle`
@@ -328,18 +342,33 @@ BEGIN
             WHERE `dtPublish` IS NOT NULL LIMIT 1;
         CALL `nextArticle`(articleId);
     ELSE
+        SET listLimit = `getConfig`('Site','listLimit');
+        IF num < 1 THEN
+            SET listLimit = 20;
+        END IF;
         SELECT `articles`.`id`, `teaser`, `title`, `articles`.`uri`,
             published(`dtPublish`) AS pubDate, `teasePic`, 
             `article_categories`.`idCategory`
             FROM `articles` 
             JOIN `article_categories` ON `articles`.`id` = `article_categories`.`idArticle`
                 AND `article_categories`.`idCategory` = categoryId
-            WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
+            WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC LIMIT listLimit;
             
-        IF @mobile != 'Y' THEN
-            SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayout'));
-        ELSE
-            SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayoutMobile'));
+        IF @mobile = 'Y' THEN
+            SELECT `published` INTO pubChk FROM `pages` 
+                WHERE `tpl` = `getConfig`('Site','listLayoutMobile');
+            IF pubChk = 1 THEN
+                SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayoutMobile'));
+            END IF;
+        END IF;
+        IF pubChk = 0 THEN
+            SELECT `published` INTO pubChk FROM `pages` 
+                WHERE `tpl` = `getConfig`('Site','listLayout');
+            IF pubChk = 1 THEN
+                SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayout'));
+            ELSE
+                SET @mvp_template = CONCAT('pages/',`getConfig`('Site','404Page'));
+            END IF;
         END IF;
     
         SELECT CONCAT(getHost(@mvp_headers), ' - ', `displayName`) 
@@ -352,6 +381,8 @@ CREATE PROCEDURE `nextTag` (tagId BIGINT)
 BEGIN
     DECLARE tagline TEXT DEFAULT '';
     DECLARE num, articleId BIGINT DEFAULT 0;
+    DECLARE listLimit INT DEFAULT 0;
+    DECLARE pubChk TINYINT DEFAULT 0;
     SET @ptitle = `nextData`.`getHost`(@mvp_headers);
     SELECT COUNT(`articles`.`id`) INTO num FROM `articles` 
         JOIN `article_tags` ON `articles`.`id` = `article_tags`.`idArticle` 
@@ -367,19 +398,34 @@ BEGIN
     IF articleId > 0 THEN
         CALL `nextArticle`(articleId);
     ELSE
+        SET listLimit = `getConfig`('Site','listLimit');
+        IF num < 1 THEN
+            SET listLimit = 20;
+        END IF;
         SELECT `articles`.`id`, `teaser`, `title`, `articles`.`uri`,
             published(`dtPublish`) AS pubDate, `teasePic`
             FROM `articles` 
             JOIN `article_tags` ON `articles`.`id` = `article_tags`.`idArticle` 
                 AND `article_tags`.`idTag` = tagId 
-            WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
+            WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC LIMIT listLimit;
         SELECT CONCAT(@ptitle, ' - ', `displayName`) INTO @ptitle 
             FROM `tags` WHERE `id` = tagId LIMIT 1;
         
-        IF @mobile != 'Y' THEN
-            SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayout'));
-        ELSE
-            SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayoutMobile'));
+        IF @mobile = 'Y' THEN
+            SELECT `published` INTO pubChk FROM `pages` 
+                WHERE `tpl` = `getConfig`('Site','listLayoutMobile');
+            IF pubChk = 1 THEN
+                SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayoutMobile'));
+            END IF;
+        END IF;
+        IF pubChk = 0 THEN
+            SELECT `published` INTO pubChk FROM `pages` 
+                WHERE `tpl` = `getConfig`('Site','listLayout');
+            IF pubChk = 1 THEN
+                SET @mvp_template = CONCAT('pages/',`getConfig`('Site','listLayout'));
+            ELSE
+                SET @mvp_template = CONCAT('pages/',`getConfig`('Site','404Page'));
+            END IF;
         END IF;
     END IF;
 END $$
@@ -537,6 +583,34 @@ BEGIN
             VALUES (articleId, 1);
     END IF;
     RETURN 1;
+END $$
+
+DROP FUNCTION IF EXISTS `checkDuplicateUri` $$
+CREATE FUNCTION `checkDuplicateUri`(articleId BIGINT, auri VARCHAR(256)) RETURNS TEXT
+READS SQL DATA
+BEGIN
+    DECLARE itelm, tipe VARCHAR(256);
+    DECLARE warnins TEXT DEFAULT '';
+    DECLARE done INT DEFAULT 0;
+    DECLARE cursr CURSOR FOR 
+        SELECT `tpl`, 'Page' FROM `pages` 
+            WHERE `uri` = auri AND `published` = 1
+        UNION SELECT `title`, 'Article' FROM `articles` 
+            WHERE `uri` = auri AND `id` != articleId
+        UNION SELECT `displayName`, 'Category' FROM `categories` 
+            WHERE `uri` = auri AND `ord` > 0
+        UNION SELECT `displayName`, 'Tag' FROM `tags` 
+            WHERE `uri` = auri;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    OPEN cursr;
+    REPEAT
+        FETCH cursr INTO itelm, tipe;
+        IF NOT done THEN
+            SET warnins = CONCAT(warnins, tipe, ' &quot;', itelm, '&quot; matches uri<br />');
+        END IF;
+    UNTIL done END REPEAT;
+    CLOSE cursr;
+    RETURN warnins;
 END $$
 
 DROP FUNCTION IF EXISTS `notifyNewArticle` $$

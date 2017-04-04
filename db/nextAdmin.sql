@@ -239,11 +239,11 @@ BEGIN
 END $$
 
 DROP PROCEDURE IF EXISTS `addMedia` $$
-CREATE PROCEDURE `addMedia` (IN upload VARCHAR(1024), IN fname VARCHAR(1024),
-                             OUT newId BIGINT)
+CREATE PROCEDURE `addMedia` (IN upload VARCHAR(1024), OUT newId BIGINT)
 BEGIN
     DECLARE userId, chk BIGINT DEFAULT 0;
-    DECLARE nUri, tUri VARCHAR(1024) DEFAULT '';
+    DECLARE nUri, tUri, fext VARCHAR(1024) DEFAULT '';
+    SET @mvp_layout = 'popup';
     SET newId = 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId = 0 THEN
@@ -253,10 +253,17 @@ BEGIN
         SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Author');
     END IF;
     IF userId > 0 THEN
-        IF upload IS NOT NULL AND upload != '' AND fname IS NOT NULL AND fname != '' THEN
-            SET fname = `nextData`.`filesafe`(fname);
+        IF upload IS NOT NULL AND upload != '' THEN
+            SET fext = upload;
+            WHILE LOCATE('.', fext) > 0 DO
+                SET fext = SUBSTR(fext, LOCATE('.', fext) + 1);
+            END WHILE;
             IF `nextData`.`isImage`(upload) THEN
-                SET nUri = CONCAT('/media/images/', fname);
+                INSERT INTO `nextData`.`media` 
+                    (`idAuthor`,`uri`,`thumb`,`isImage`,`dtAdded`)
+                    VALUES (userId, '', '', 1, NOW());
+                SET newId = LAST_INSERT_ID();
+                SET nUri = CONCAT('/media/images/', newId, '.', fext);
                 SET chk = convert_img(
                     upload,
                     CONCAT(`nextData`.`getConfig`('Site','webroot'), nUri),
@@ -265,7 +272,8 @@ BEGIN
                 IF chk != 0 THEN
                     SET @err = CONCAT('Error processing image file: ',chk);
                 ELSE
-                    SET tUri = CONCAT('/media/images/thumb_', fname);
+                    UPDATE `nextData`.`media` SET `uri` = nUri WHERE `id` = newId;
+                    SET tUri = CONCAT('/media/images/thumb_', newId, '.', fext);
                     SET chk = convert_img(
                         upload,
                         CONCAT(`nextData`.`getConfig`('Site','webroot'), tUri),
@@ -273,35 +281,35 @@ BEGIN
                         );
                     IF chk != 0 THEN
                         SET tUri = NULL;
+                    ELSE
+                        UPDATE `nextData`.`media` SET `thumb` = tUri WHERE `id` = newId;
                     END IF;
-                    INSERT INTO `nextData`.`media` 
-                        (`idAuthor`,`uri`,`thumb`,`isImage`,`dtAdded`)
-                        VALUES (userId, nUri, tUri, 1, NOW());
-                    SET newId = LAST_INSERT_ID();
                 END IF;
             ELSE
-                SET nUri = CONCAT('/media/files/', fname);
+                INSERT INTO `nextData`.`media` 
+                    (`idAuthor`,`uri`,`thumb`,`isImage`,`dtAdded`)
+                VALUES 
+                    (userId, '', '/media/images/file_thumb.png', 0, NOW());
+                SET newId = LAST_INSERT_ID();
+                SET nUri = CONCAT('/media/files/', newId, '.', fext);
                 SET chk = file_copy(upload,
                         CONCAT(`nextData`.`getConfig`('Site','webroot'), nUri));
                 IF chk != 0 THEN
                     SET @err = CONCAT('Error processing media file: ',chk);
                 ELSE
-                    INSERT INTO `nextData`.`media` 
-                        (`idAuthor`,`uri`,`thumb`,`isImage`,`dtAdded`)
-                    VALUES 
-                        (userId, nUri, '/media/images/file_thumb.png', 0, NOW());
-                    SET newId = LAST_INSERT_ID();
+                    UPDATE `nextData`.`media` SET `uri` = nUri WHERE `id` = newId;
                 END IF;
             END IF;
         END IF;
         IF newId > 0 THEN
             SELECT * FROM `nextData`.`media` WHERE `id` = newId;
+            SET @mvp_template = 'MediaAdded';
         END IF;
     ELSE
         SET @mvp_template = 'Login';
         SET @err = 'Please log in with Admin, Editor or Author privileges';
         REPLACE INTO `nextData`.`sessions` (`id`,`ipAddress`,`redirect`)
-            VALUES (@mvp_session, @mvp_remoteip, 'AddMedia');
+            VALUES (@mvp_session, @mvp_remoteip, 'addMedia');
     END IF;
 END $$
 
@@ -565,6 +573,7 @@ BEGIN
                     `idCategory` = catId
                 WHERE `id` = articleId;
                 SET chk = `nextData`.`resetArticleCategories`(articleId);
+                SET @err = `nextData`.`checkDuplicateUri`(articleId, `nextData`.`urize`(uriin));
             END IF;
         END IF;
         SELECT * FROM `nextData`.`articles` WHERE `id` = articleId;
@@ -774,7 +783,8 @@ BEGIN
     DECLARE userId BIGINT DEFAULT 0;
     SET userId = `nextData`.`checkSession`(@mvp_session, @mvp_remoteip, 'Admin');
     IF userId > 0 THEN
-        SELECT * FROM `nextData`.`mail_errors`;
+        SELECT *, DATE_FORMAT(`theDate`,'%b %D, %Y %h:%i %p') AS formatDate 
+            FROM `nextData`.`mail_errors`;
         CALL `adminMenu`();
     ELSE
         SET @err = 'Please log in with Admin privileges.';
@@ -811,9 +821,6 @@ BEGIN
 IF xmlFile IS NOT NULL AND xmlFile != '' THEN
 IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
     SET xml = LOAD_FILE(xmlFile);
-    SET xid = `nextData`.`setConfig`('core','tagline',
-        CONCAT(ExtractValue(xml, '/rss/channel/title'), ' - ',
-            ExtractValue(xml, '/rss/channel/description')));
     SET baseURL = ExtractValue(xml, '//wp:base_site_url');
     SET blogURL = ExtractValue(xml, '//wp:base_blog_url');
     
@@ -923,6 +930,8 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
         SET parseText = SUBSTR(parseText, LOCATE('</item>', parseText) + 7);
     END WHILE;
     
+    SET rid = `nextData`.`resetArticleCategories`(NULL);
+    SET rid = `nextData`.`setConfig`('Site','mainMenu',`nextData`.`publicCategoriesHtml`());
     SET messg = 'Import Successful';
 ELSE
   SET @err = 'Please log in with Admin privileges';

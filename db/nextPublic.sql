@@ -59,10 +59,8 @@ BEGIN
     END IF;
     
     IF stop = 0 THEN
-        SELECT `categories`.`id` INTO categoryId FROM `nextData`.`categories` 
-            JOIN `nextData`.`article_categories` ON `categories`.`id` = `article_categories`.`idCategory`
-            JOIN `nextData`.`articles` ON `article_categories`.`idArticle` = `articles`.`id`
-            WHERE `categories`.`uri` = @mvp_uri AND `articles`.`dtPublish` IS NOT NULL LIMIT 1;
+        SELECT `id` INTO categoryId FROM `nextData`.`categories` 
+            WHERE `uri` = @mvp_uri AND `ord` > 0 LIMIT 1;
         IF categoryId > 0 THEN
             CALL `nextData`.`nextCategory`(categoryId);
             SET stop = 1;
@@ -70,17 +68,15 @@ BEGIN
     END IF;
     
     IF stop = 0 THEN
-        SELECT `tags`.`id` INTO tagId FROM `nextData`.`tags` 
-            JOIN `nextData`.`article_tags` ON `tags`.`id` = `article_tags`.`idTag`
-            JOIN `nextData`.`articles` ON `article_tags`.`idArticle` = `articles`.`id`
-            WHERE `tags`.`uri` = @mvp_uri AND `articles`.`dtPublish` IS NOT NULL LIMIT 1;
+        SELECT `id` INTO tagId FROM `nextData`.`tags` 
+            WHERE `uri` = @mvp_uri LIMIT 1;
         IF tagId > 0 THEN
             CALL `nextData`.`nextTag`(tagId);
             SET stop = 1;
         END IF;
     END IF;
        
-    IF stop = 0 THEN
+    IF stop = 0 AND @mvp_uri = '' THEN
         SET defaultUri = `nextData`.`getConfig`('Site','default_uri');
         SELECT `tpl` INTO pageTpl FROM `nextData`.`pages` 
             WHERE `uri` = defaultUri AND `published` > 0 LIMIT 1;
@@ -90,18 +86,20 @@ BEGIN
                     WHERE `uri` = defaultUri AND `published` > 0 AND `mobile` = 1 LIMIT 1;
             END IF;
             SET @mvp_template = CONCAT('pages/', pageTpl);
-            SET stop = 1;
         ELSE
             SELECT `id` INTO articleId FROM `nextData`.`articles` 
                 WHERE `uri` = defaultUri AND `dtPublish` IS NOT NULL LIMIT 1;
             IF articleId > 0 THEN
                 CALL `nextData`.`nextArticle`(articleId);
-            ELSEIF @mvp_uri = '' THEN
-                CALL `nextData`.`nextCategory`(1);
             ELSE
-                SET @mvp_template = CONCAT('pages/', `nextData`.`getConfig`('Site','404Page'));
+                CALL `nextData`.`nextCategory`(1);
             END IF;
         END IF;
+        SET stop = 1;
+    END IF;
+    
+    IF stop = 0 THEN
+        SET @mvp_template = CONCAT('pages/', `nextData`.`getConfig`('Site','404Page'));
     END IF;
     
     SET @keywords = `nextData`.`getConfig`('Site','keywords');
@@ -114,7 +112,8 @@ DROP PROCEDURE IF EXISTS `Archives` $$
 CREATE PROCEDURE `Archives`()
 BEGIN
     SELECT `uri`, `title`, YEAR(`dtPublish`) AS yr, MONTHNAME(`dtPublish`) AS mnth 
-    FROM `nextData`.`articles` WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
+    FROM `nextData`.`articles` AS archives 
+    WHERE `dtPublish` IS NOT NULL ORDER BY `dtPublish` DESC;
 END $$
 
 DROP PROCEDURE IF EXISTS `Disqus` $$

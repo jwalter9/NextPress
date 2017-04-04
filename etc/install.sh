@@ -104,14 +104,14 @@ mkdir /var/nextpress
 cd ../www
 cp -R public /var/nextpress/
 if test $? -ne 0; then
-	echo "ERROR: unable to copy www/public to /var/www"
+	echo "ERROR: unable to copy www/public to /var/nextpress"
 else
 	echo "NextPress web root successfully installed"
 fi
 
 cp -R templates /var/nextpress/
 if test $? -ne 0; then
-	echo "ERROR: unable to copy www/templates to /var/www"
+	echo "ERROR: unable to copy www/templates to /var/nextpress"
 else
 	echo "NextPress web templates successfully installed"
 fi
@@ -126,14 +126,6 @@ if test $? -ne 0; then
 else
 	echo "NextPress web access successfully installed"
 fi
-
-cp nextsudo /etc/sudoers.d/
-if test $? -ne 0; then
-	echo "ERROR: unable to copy etc/nextsudo to /etc/sudoers.d"
-else
-	echo "NextPress apache reload permission successfully installed"
-fi
-chmod 0440 /etc/sudoers.d/nextsudo
 
 echo
 cp nextPublic.conf /etc/apache2/sites-available/
@@ -152,11 +144,12 @@ else
 	echo "  /etc/apache2/sites-available/nextAdmin.conf"
 fi
 
-
 if test -f "/etc/apparmor.d/local/usr.sbin.mysqld"; then
     echo "Adding apparmor permissions"
-    cat nextapparmor >> /etc/apparmor.d/local/usr.sbin.mysqld
-    /sbin/apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
+#    cat nextapparmor >> /etc/apparmor.d/local/usr.sbin.mysqld
+#    /sbin/apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
+    ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/
+    /etc/init.d/apparmor restart
 else
     echo "If SELinux is installed (and not turned off),"
     echo "make sure to use audit2allow to create a profile,"
