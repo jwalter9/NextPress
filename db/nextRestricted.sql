@@ -632,7 +632,7 @@ BEGIN
         FROM `articles` LEFT JOIN `users` ON `articles`.`idAuthor` = `users`.`id`
         WHERE `articles`.`id` = articleId AND `dtPublish` IS NOT NULL LIMIT 1;
     IF titl != '' AND teasr != '' THEN
-        SET ebody = LOAD_FILE(CONCAT(`getConfig`('Site','tplroot'),'/admin/email/NewArticle.tpl'));
+        SET ebody = np_loadfile(CONCAT(`getConfig`('Site','tplroot'),'/admin/email/NewArticle.tpl'));
         IF ebody != '' THEN
             SET ebody = REPLACE(ebody, '<# TITLE #>', titl);
             SET ebody = REPLACE(ebody, '<# TEASER #>', teasr);

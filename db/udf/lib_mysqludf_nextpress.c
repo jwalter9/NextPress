@@ -335,6 +335,69 @@ char* tpl_list(
 }
 
 
+/*============================ np_loadfile ============================*/
+/* Special thanks to MySQL and Oracle for not allowing in-session update
+   of secure_file_priv. - Nice job! And so this function had to be written */
+   
+my_bool np_loadfile_init(
+	UDF_INIT *initid
+,	UDF_ARGS *args
+,	char *message
+){
+	if(args->arg_count != 1
+	|| args->arg_type[0]!=STRING_RESULT){
+		strcpy(message,
+			"Expected 1 parameter: absolute path of file"
+		);
+		return 1;
+	};
+    FILE *f;
+    f = fopen( args->args[0], "rb" );
+    if( f == NULL ){
+        sprintf(message, "%s not readable", args->args[0]);
+        return 1;
+    };
+    fclose( f );
+    return 0;
+}
+
+void np_loadfile_deinit(
+	UDF_INIT *initid
+){
+    free(initid->ptr);
+}
+
+char *np_loadfile(
+	UDF_INIT *initid
+,	UDF_ARGS *args
+,	char* result
+,	unsigned long* length
+,	char *is_null
+,	char *error
+){
+    FILE *datfile = NULL;
+    size_t filesize;
+    
+    datfile = fopen(args->args[0], "rb");
+    fseek(datfile, 0, SEEK_END);
+    filesize = ftell(datfile);
+
+	initid->ptr = malloc(filesize + 1);
+	if(!initid->ptr){
+		strcpy(error, "Failed to allocate memory for result");
+		*error = 1;
+		fclose(datfile);
+		return NULL;
+	};
+	
+    fseek(datfile, 0, SEEK_SET);
+    fread(initid->ptr, 1, filesize, datfile);
+    fclose(datfile);
+	
+	*length = filesize;
+	return initid->ptr;
+}
+
 
 
 #endif /* HAVE_DLOPEN */

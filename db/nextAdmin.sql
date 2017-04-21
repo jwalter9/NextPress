@@ -69,7 +69,7 @@ BEGIN
         SET @err = CONCAT('The email address ',eaddr,' is not linked to an account.');
     ELSE
         SET vhash = MD5(CONCAT(@mvp_remoteip, RAND()));
-        SET ebody = LOAD_FILE(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
+        SET ebody = np_loadfile(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
                 '/admin/email/ForgotPassword.tpl'));
         IF ebody != '' THEN
             SET ebody = REPLACE(ebody, '<# RECIPIENT #>', eaddr);
@@ -114,7 +114,7 @@ BEGIN
             INSERT INTO `nextData`.`users` (`email`, `verifyCode`)
                 VALUES (eaddr, vhash);
             SET idUsr = LAST_INSERT_ID();
-            SET ebody = LOAD_FILE(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
+            SET ebody = np_loadfile(CONCAT(`nextData`.`getConfig`('Site','tplroot'),
                 '/admin/email/Register.tpl'));
             IF ebody != '' THEN
                 SET ebody = REPLACE(ebody, '<# RECIPIENT #>', eaddr);
@@ -814,78 +814,85 @@ END $$
 DROP PROCEDURE IF EXISTS `WPImport` $$
 CREATE PROCEDURE `WPImport` (IN xmlFile VARCHAR(1024), OUT messg VARCHAR(48))
 BEGIN
-    DECLARE xml, parseText, itemXML, itemType, parseItem TEXT DEFAULT '';
+    DECLARE xml, parseText, itemXML, itemType, parseItem, itemItem TEXT DEFAULT '';
     DECLARE baseURL, blogURL, linkURL VARCHAR(1024) DEFAULT '';
     DECLARE pid, xid, yid, zid, rid, tid BIGINT DEFAULT 0;
 
 IF xmlFile IS NOT NULL AND xmlFile != '' THEN
 IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
-    SET xml = LOAD_FILE(xmlFile);
+    SET xml = np_loadfile(xmlFile);
     SET baseURL = ExtractValue(xml, '//wp:base_site_url');
     SET blogURL = ExtractValue(xml, '//wp:base_blog_url');
-    
-    SET parseText = xml;
+
+    SELECT `id` INTO yid FROM `nextData`.`roles` WHERE `label` = 'Author';
+    SET parseText = SUBSTR(xml, LOCATE('<wp:author>', xml));
     WHILE LOCATE('</wp:author>', parseText) > 0 DO
-        INSERT INTO `nextData`.`users`(`displayName`,`email`,`url`,`avatarUri`)
-        VALUES (
-            ExtractValue(parseText, '//wp:author_display_name'),
-            ExtractValue(parseText, '//wp:author_email'),
-            ExtractValue(parseText, '//wp:author_url'),
-            ExtractValue(parseText, '//wp:author_avatar')
-        );
-                
+        SET xid = 0;
+        SET itemXML = SUBSTR(parseText, 1, LOCATE('</wp:author>', parseText) + 12);
+        SELECT COUNT(`id`) INTO xid FROM `nextData`.`users` 
+            WHERE `email` = ExtractValue(itemXML, '//wp:author_email');
+        IF xid = 0 THEN
+            INSERT INTO `nextData`.`users`(`displayName`,`email`,`url`,`avatarUri`)
+            VALUES (
+                ExtractValue(itemXML, '//wp:author_display_name'),
+                ExtractValue(itemXML, '//wp:author_email'),
+                ExtractValue(itemXML, '//wp:author_url'),
+                ExtractValue(itemXML, '//wp:author_avatar')
+            );
+            SET zid = LAST_INSERT_ID();
+            INSERT INTO `nextData`.`user_roles` (`idUser`,`idRole`) VALUES (zid, yid);
+        END IF;
         SET parseText = SUBSTR(parseText,LOCATE('</wp:author>',parseText) + 12);
     END WHILE;
     
-    SET parseText = xml;
+    SET parseText = SUBSTR(xml, LOCATE('<wp:category>', xml));
     WHILE LOCATE('</wp:category>', parseText) > 0 DO
         SET xid = 1;
+        SET itemXML = SUBSTR(parseText, 1, LOCATE('</wp:category>', parseText) + 14);
         SELECT `id` INTO xid FROM `nextData`.`categories`
-            WHERE `uri` = ExtractValue(parseText, '//wp:category_parent')
+            WHERE `uri` = ExtractValue(itemXML, '//wp:category_parent')
             LIMIT 1;
+        SELECT COUNT(`id`) INTO yid FROM `nextData`.`categories` 
+            WHERE `uri` = ExtractValue(itemXML, '//wp:category_nicename');
         
-        INSERT INTO `nextData`.`categories`
-            (`idParent`,`displayName`,`uri`,`ord`) VALUES (
-                xid,
-                ExtractValue(parseText, '//wp:cat_name'),
-                ExtractValue(parseText, '//wp:category_nicename'),
-                ExtractValue(parseText, '//wp:term_id')
-            );
+        IF yid = 0 THEN
+            SELECT MAX(`ord`) INTO zid FROM `nextData`.`categories`;
+            INSERT INTO `nextData`.`categories`
+                (`idParent`,`displayName`,`uri`,`ord`) VALUES (
+                    xid,
+                    ExtractValue(itemXML, '//wp:cat_name'),
+                    ExtractValue(itemXML, '//wp:category_nicename'),
+                    zid + 1
+                );
+        END IF;
                 
         SET parseText = SUBSTR(parseText,LOCATE('</wp:category>',parseText)+14);
     END WHILE;
     
-    SET parseText = xml;
+    SET parseText = SUBSTR(xml, LOCATE('<wp:tag>', xml));
     WHILE LOCATE('</wp:tag>', parseText) > 0 DO
-        INSERT INTO `nextData`.`tags` (`displayName`, `uri`) VALUES (
-                ExtractValue(parseText, '//wp:tag_name'),
-                ExtractValue(parseText, '//wp:tag_slug')
-            );
+        SET itemXML = SUBSTR(parseText, 1, LOCATE('</wp:tag>', parseText) + 9);
+        SELECT COUNT(`uri`) INTO xid FROM `nextData`.`tags`
+            WHERE `uri` = ExtractValue(itemXML, '//wp:tag_slug');
+        IF xid = 0 THEN
+            INSERT INTO `nextData`.`tags` (`displayName`, `uri`) VALUES (
+                    ExtractValue(itemXML, '//wp:tag_name'),
+                    ExtractValue(itemXML, '//wp:tag_slug')
+                );
+        END IF;
                 
         SET parseText = SUBSTR(parseText, LOCATE('</wp:tag>', parseText) + 9);
     END WHILE;
     
-    SET parseText = xml;
+    SET parseText = SUBSTR(xml, LOCATE('<item>', xml));
     WHILE LOCATE('</item>', parseText) > 0 DO
-        SET itemXML = SUBSTR(parseText, 1, LOCATE('</item>', parseText));
+        SET itemXML = SUBSTR(parseText, 1, LOCATE('</item>', parseText) + 7);
         SET itemType = ExtractValue(itemXML, '//wp:post_type');
-        IF itemType = 'attachment' THEN
-            SET linkURL = ExtractValue(itemXML, '//guid');
-            IF LOCATE(baseURL, linkURL) = 1 THEN
-                SET linkURL = SUBSTR(linkURL, LENGTH(baseURL) + 1);
-            ELSEIF LOCATE(blogURL, linkURL) = 1 THEN
-                SET linkURL = SUBSTR(linkURL, LENGTH(blogURL) + 1);
-            END IF;
-            INSERT INTO `nextData`.`media` (`uri`, `isImage`)
-                VALUES (linkURL, `nextData`.`isImage`(linkURL));
-        
-        ELSEIF itemType = 'post' OR itemType = 'page' THEN
-            SET linkURL = ExtractValue(itemXML, '//link');
-            IF LOCATE(baseURL, linkURL) = 1 THEN
-                SET linkURL = SUBSTR(linkURL, LENGTH(baseURL) + 1);
-            ELSEIF LOCATE(blogURL, linkURL) = 1 THEN
-                SET linkURL = SUBSTR(linkURL, LENGTH(blogURL) + 1);
-            END IF;
+        IF itemType = 'post' OR itemType = 'page' THEN
+        SET zid = 0;
+        SELECT `id` INTO zid FROM `nextData`.`articles`
+            WHERE `uri` = ExtractValue(itemXML, '//wp:post_name') LIMIT 1;
+        IF zid > 0 THEN
             SET xid = 0;
             SELECT `id` INTO xid FROM `nextData`.`users`
                 WHERE `displayName` = 
@@ -895,26 +902,28 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
                 `title`,`uri`,`dtPublish`,`alreadyPublished`,`numViews`,`idwp`)
                 VALUES (xid, ExtractValue(itemXML, '//content:encoded'),
                 `nextData`.`tease`(ExtractValue(itemXML,'//content:encoded')),
-                ExtractValue(itemXML, '//title'),linkURL,
-                ExtractValue(itemXML, '//pubDate'),    1, 0,
+                ExtractValue(itemXML, '//title'),
+                ExtractValue(itemXML, '//wp:post_name'),
+                ExtractValue(itemXML, '//wp:post_date'),    1, 0,
                 ExtractValue(itemXML, '//wp:post_id'));
             SET xid = LAST_INSERT_ID();
             
-            SET parseItem = itemXML;
+            SET parseItem = SUBSTR(itemXML, LOCATE('<category', itemXML));
             WHILE LOCATE('</category>', parseItem) > 0 DO
+                SET itemItem = SUBSTR(parseItem, 1, LOCATE('</category>', parseItem) + 11);
                 SET yid = 0;
-                SET itemType = ExtractValue(parseItem, '//@domain');
+                SET itemType = ExtractValue(itemItem, '//@domain');
                 IF itemType = 'category' THEN
                     SELECT `id` INTO yid FROM `nextData`.`categories`
-                        WHERE `uri` = ExtractValue(parseItem, '//@nicename') 
+                        WHERE `uri` = ExtractValue(itemItem, '//@nicename') 
                         LIMIT 1;
                     IF yid > 0 THEN
-                        INSERT INTO `nextData`.`article_categories`
-                            (`idArticle`, `idCategory`)    VALUES (xid, yid);
+                        UPDATE `nextData`.`articles` SET `idCategory` = yid
+                            WHERE `id` = xid;
                     END IF;
                 ELSE
                     SELECT `id` INTO yid FROM `nextData`.`tags`
-                        WHERE `uri` = ExtractValue(parseItem, '//@nicename') 
+                        WHERE `uri` = ExtractValue(itemItem, '//@nicename') 
                         LIMIT 1;
                     IF yid > 0 THEN
                         INSERT INTO `nextData`.`article_tags`
@@ -926,12 +935,12 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
                     SUBSTR(parseItem, LOCATE('</category>', parseItem) + 11);
             END WHILE;
         END IF;
+        END IF;
         
         SET parseText = SUBSTR(parseText, LOCATE('</item>', parseText) + 7);
     END WHILE;
     
     SET rid = `nextData`.`resetArticleCategories`(NULL);
-    SET rid = `nextData`.`setConfig`('Site','mainMenu',`nextData`.`publicCategoriesHtml`());
     SET messg = 'Import Successful';
 ELSE
   SET @err = 'Please log in with Admin privileges';
