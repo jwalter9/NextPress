@@ -12,7 +12,7 @@
         <li><span class="entry-label">URL (optional):</span><br />
             &nbsp; &nbsp; &nbsp;<input type="text" name="uurl" value="<# users.url #>" /></li>
         <li class="spacer"></li>
-        <li><span class="entry-label">Avatar:</span><# IF users.avatar #><img src="avUri" /><# ENDIF #><br />
+        <li><span class="entry-label">Avatar:</span><# IF users.avatarUri #><img src="<# users.avatarUri #>" /><# ENDIF #><br />
             &nbsp; &nbsp; &nbsp;
             <input type="file" name="avFile" /></li>
         <li class="spacer"></li>
