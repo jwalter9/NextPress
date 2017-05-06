@@ -855,7 +855,8 @@ IF `nextData`.`checkSession`(@mvp_session,@mvp_remoteip,'Admin') > 0 THEN
         SELECT COUNT(`id`) INTO yid FROM `nextData`.`categories` 
             WHERE `uri` = ExtractValue(itemXML, '//wp:category_nicename');
         
-        IF yid = 0 THEN
+        IF yid = 0 AND 
+        ExtractValue(itemXML, '//wp:category_nicename') != 'uncategorized' THEN
             SELECT MAX(`ord`) INTO zid FROM `nextData`.`categories`;
             INSERT INTO `nextData`.`categories`
                 (`idParent`,`displayName`,`uri`,`ord`) VALUES (
